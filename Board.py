@@ -2,11 +2,11 @@ import random
 from typing import Dict
 
 from Coordinates import Coordinates
-from Entity import Entity
-from Grass import Grass
-from Herbivore import Herbivore
-from Predator import Predator
-from Stone import Stone
+from entities.Entity import Entity
+from entities.Grass import Grass
+from entities.Herbivore import Herbivore
+from entities.Predator import Predator
+from entities.Stone import Stone
 
 
 class Board:
