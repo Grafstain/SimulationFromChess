@@ -12,6 +12,7 @@ class BoardConsoleRenderer:
     ANSI_RED_ENTITY_COLOR = "\u001B[31m"
     ANSI_WHITE_ENTITY_COLOR = "\u001B[97m"
     ANSI_BLACK_ENTITY_COLOR = "\u001B[30m"
+    TAB = '\t'
 
     def render(self, board):
         # print("Rendering board...")
@@ -34,7 +35,7 @@ class BoardConsoleRenderer:
     def get_sprite_for_empty_square(self, coordinates: Coordinates) -> str:
         background_color = self.ANSI_BLACK_SQUARE_BACKGROUND if Board.is_square_dark(
             coordinates) else self.ANSI_WHITE_SQUARE_BACKGROUND
-        return f"{background_color}    {self.ANSI_RESET}"
+        return f"{background_color}  {self.TAB}{self.ANSI_RESET}"
 
     def select_ascii_sprite_for_entity(self, entity) -> str:
         if isinstance(entity, Herbivore):
