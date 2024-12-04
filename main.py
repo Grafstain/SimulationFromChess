@@ -8,3 +8,4 @@ renderer = BoardConsoleRenderer()
 # Установка существ на доске
 board.setup_random_positions()
 renderer.render(board)
+renderer.display_log(board)
