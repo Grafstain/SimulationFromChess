@@ -30,6 +30,9 @@ class BoardConsoleRenderer:
         # Выводим заголовок для столбцов
         header = "    " + " ".join(f"{i + 1:3}" for i in range(board.width))  # Заголовок столбцов с выравниванием
         print(header)
+        # self.display_log(board)
+        self.display_common_creature_info(board)
+        print()
 
     def render_without_entity(self, board):
         self.render(board)
@@ -66,3 +69,13 @@ class BoardConsoleRenderer:
                     entity = board.get_piece(coordinates)
                     if isinstance(entity, (Herbivore, Predator)):
                         print(f"{entity}\t{entity.coordinates}\t{entity.hp} energy")
+
+    @staticmethod
+    def display_common_creature_info(board):
+        print("Объекты на поле:")
+        herbivore_count = sum(1 for entity in board.entities.values() if isinstance(entity, Herbivore))
+        predator_count = sum(1 for entity in board.entities.values() if isinstance(entity, Predator))
+        grass_count = sum(1 for entity in board.entities.values() if isinstance(entity, Grass))
+        print(f"Herbivore:\t{herbivore_count}\n"
+              f"Predator:\t{predator_count}\n"
+              f"Grass:\t\t{grass_count}")
