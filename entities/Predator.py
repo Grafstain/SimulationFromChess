@@ -1,5 +1,5 @@
 import Coordinates
-from Creature import Creature
+from entities.Creature import Creature
 
 
 class Predator(Creature):
