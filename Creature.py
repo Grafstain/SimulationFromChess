@@ -1,9 +1,9 @@
-from abc import ABC
 from Coordinates import Coordinates
+from Entity import Entity
 
 
-class Creature(ABC):
+class Creature(Entity):
     def __init__(self, coordinates: Coordinates, speed: int, hp: int):
-        self.coordinates = coordinates  # Координаты на доске
+        super().__init__(coordinates)
         self.speed = speed  # Скорость передвижения
         self.hp = hp  # Очки здоровья
