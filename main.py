@@ -1,11 +1,15 @@
-from Board import Board
-from BoardConsoleRenderer import BoardConsoleRenderer
+from InitAction import InitAction
+from MoveAction import MoveAction
+from Simulation import Simulation
 
-# Создание доски
-board = Board()
-renderer = BoardConsoleRenderer()
+# Создание симуляции
+simulation = Simulation()
 
-# Установка существ на доске
-board.setup_random_positions()
-renderer.render(board)
-renderer.display_log(board)
+# Добавление действий
+simulation.init_actions.append(InitAction())
+simulation.turn_actions.append(MoveAction())
+
+# Запуск симуляции
+simulation.start_simulation()
+simulation.next_turn()
+# simulation.next_turn()
