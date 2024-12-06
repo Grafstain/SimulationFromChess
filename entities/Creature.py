@@ -1,7 +1,7 @@
 from collections import deque
 
-from Coordinates import Coordinates
-from entities.Entity import Entity
+from ..Coordinates import Coordinates
+from .Entity import Entity
 
 
 class Creature(Entity):
