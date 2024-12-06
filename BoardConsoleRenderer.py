@@ -31,7 +31,16 @@ class BoardConsoleRenderer:
         # self.display_log(board)
 
     def render_without_entity(self, board):
-        self.render(board)
+        """Рендерит только пустую доску без существ"""
+        for rank in range(board.height, 0, -1):
+            line = f"{rank:2}  "
+            for file in range(1, board.width+1):
+                coordinates = Coordinates(file, rank)
+                line += self.get_sprite_for_empty_square(coordinates)
+            line += self.ANSI_RESET
+            print(line)
+        header = "    " + " ".join(f"{i + 1:3}" for i in range(board.width))
+        print(header)
 
     def get_sprite_for_empty_square(self, coordinates: Coordinates) -> str:
         background_color = self.ANSI_BLACK_SQUARE_BACKGROUND if Board.is_square_dark(
