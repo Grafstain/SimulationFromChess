@@ -51,12 +51,10 @@ class TestBoardRendering(unittest.TestCase):
         output = StringIO()
         sys.stdout = output
 
-        self.renderer.render_without_entity(self.board)
+        self.renderer.render(self.board)
         render_result = output.getvalue()
         sys.stdout = original_stdout
-        print()
         self.assertEqual(render_result, expected_output)
-        print()
 
 
 if __name__ == '__main__':
