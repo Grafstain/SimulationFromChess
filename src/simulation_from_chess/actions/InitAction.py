@@ -1,4 +1,4 @@
-from ..actions import *
+from src.simulation_from_chess.actions import Action
 
 
 class InitAction(Action):

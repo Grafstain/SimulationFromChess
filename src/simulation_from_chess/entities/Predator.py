@@ -1,5 +1,6 @@
 from ..core import Coordinates
-from ..entities import Creature, Herbivore
+from ..entities.Herbivore import Herbivore
+from ..entities.Creature import Creature
 
 
 class Predator(Creature):

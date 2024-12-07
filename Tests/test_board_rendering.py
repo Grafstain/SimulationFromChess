@@ -1,4 +1,11 @@
-from Tests import *
+import sys
+import unittest
+from io import StringIO
+
+from src.simulation_from_chess import*
+from src.simulation_from_chess.core import Board, Coordinates
+from src.simulation_from_chess.entities import Herbivore, Grass, Predator
+from src.simulation_from_chess.renderers import BoardConsoleRenderer
 
 
 class TestBoardRendering(unittest.TestCase):

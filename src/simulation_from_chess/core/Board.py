@@ -1,5 +1,8 @@
-from . import Coordinates
-from ..core import *
+import random
+from typing import Dict
+
+from src.simulation_from_chess.core import Coordinates
+from src.simulation_from_chess.entities import Entity, Herbivore, Predator, Grass, Stone
 
 
 class Board:
@@ -101,7 +104,6 @@ class Board:
                 self.set_piece(coord, stone)
                 placed_stone += 1
                 all_coordinates.remove(coord)
-
 
     @staticmethod
     def is_square_dark(coordinates: Coordinates) -> bool:

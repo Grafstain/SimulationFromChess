@@ -1,5 +1,5 @@
-from ..core import Coordinates
-from ..entities import Entity
+from ..core.Coordinates import Coordinates
+from ..entities.Entity import Entity
 
 
 class Stone(Entity):

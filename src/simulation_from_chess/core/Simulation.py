@@ -1,5 +1,5 @@
 from .Board import Board
-from ..renderers import BoardConsoleRenderer
+from ..renderers.BoardConsoleRenderer import BoardConsoleRenderer
 
 
 class Simulation:
@@ -10,7 +10,6 @@ class Simulation:
         self.init_actions = []  # Действия перед стартом симуляции
         self.turn_actions = []  # Действия на каждом ходе
         # self.board.setup_random_positions()
-
 
     def next_turn(self):
         """Просимулировать и отрендерить один ход."""
@@ -34,10 +33,10 @@ class Simulation:
         for action in self.init_actions:
             action.execute(self.board)
         self.next_turn()
-##TODO: поправить рендер клеток при старте
-        # while True:
-        #     self.next_turn()
-            # Здесь можно добавить задержку или условие для выхода из цикла
+
+    # while True:
+    #     self.next_turn()
+    # Здесь можно добавить задержку или условие для выхода из цикла
 
     def pause_simulation(self):
         """Приостановить бесконечный цикл симуляции и рендеринга."""
