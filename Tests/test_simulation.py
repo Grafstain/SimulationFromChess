@@ -3,6 +3,7 @@ import unittest
 from io import StringIO
 from unittest.mock import patch
 
+from src.simulation_from_chess.actions.InitAction import InitAction
 from src.simulation_from_chess.core import Board, Simulation
 from src.simulation_from_chess.core.Coordinates import Coordinates
 from src.simulation_from_chess.entities import Herbivore, Predator, Grass
@@ -145,6 +146,31 @@ class TestSimulation(unittest.TestCase):
         
         # Проверяем, что существо получило урон от голода
         self.assertEqual(herbivore.hp, initial_hp - SIMULATION_CONFIG['hunger_damage'])
+
+    def test_initial_creature_stats(self):
+        """Тест начальных параметров существ при инициализации."""
+        self.simulation.init_actions.extend([
+            InitAction(herbivores=1, predators=1, grass=1)
+        ])
+        
+        # Запускаем инициализацию
+        for action in self.simulation.init_actions:
+            action.execute(self.simulation.board)
+        
+        # Находим созданные существа
+        herbivore = None
+        predator = None
+        for entity in self.simulation.board.entities.values():
+            if isinstance(entity, Herbivore):
+                herbivore = entity
+            elif isinstance(entity, Predator):
+                predator = entity
+        
+        # Проверяем начальные значения HP
+        self.assertIsNotNone(herbivore, "Травоядное не было создано")
+        self.assertIsNotNone(predator, "Хищник не был создан")
+        self.assertEqual(herbivore.hp, CREATURE_CONFIG['herbivore']['initial_hp'])
+        self.assertEqual(predator.hp, CREATURE_CONFIG['predator']['initial_hp'])
 
 
 if __name__ == '__main__':
