@@ -1,44 +1,62 @@
 from .Board import Board
 from ..renderers.BoardConsoleRenderer import BoardConsoleRenderer
+import time
+import keyboard
 
 
 class Simulation:
     def __init__(self):
-        self.board = Board()  # Инициализация карты
-        self.move_counter = 0  # Счетчик ходов
-        self.renderer = BoardConsoleRenderer()  # Рендерер поля
-        self.init_actions = []  # Действия перед стартом симуляции
-        self.turn_actions = []  # Действия на каждом ходе
-        # self.board.setup_random_positions()
+        self.board = Board()
+        self.move_counter = 0
+        self.renderer = BoardConsoleRenderer()
+        self.init_actions = []
+        self.turn_actions = []
+        self.is_running = False
+        self.is_paused = False
 
     def next_turn(self):
         """Просимулировать и отрендерить один ход."""
-        print(f"Turn {self.move_counter + 1}:")
+        print(f"\nХод {self.move_counter + 1}:")
 
-        # Выполнение действий на текущем ходе
         for action in self.turn_actions:
             action.execute(self.board)
 
-        # Рендеринг состояния доски
         self.renderer.render(self.board)
-
-        # Увеличение счетчика ходов
+        self.renderer.display_common_creature_info(self.board)
         self.move_counter += 1
 
-    def start_simulation(self):
+    def start(self):
         """Запустить бесконечный цикл симуляции и рендеринга."""
-        print("Starting simulation...")
+        print("Начало симуляции...")
+        print("Управление:")
+        print("  ПРОБЕЛ - пауза/продолжить")
+        print("  q - остановить симуляцию")
 
-        # Выполнение действий перед стартом симуляции
         for action in self.init_actions:
             action.execute(self.board)
-        self.next_turn()
 
-    # while True:
-    #     self.next_turn()
-    # Здесь можно добавить задержку или условие для выхода из цикла
+        self.is_running = True
+        while self.is_running:
+            if keyboard.is_pressed('space'):
+                self.toggle_pause()
+                time.sleep(0.1)
+            elif keyboard.is_pressed('q'):
+                self.stop_simulation()
+                break
 
-    def pause_simulation(self):
-        """Приостановить бесконечный цикл симуляции и рендеринга."""
-        print("Simulation paused.")
-        # Логика для приостановки симуляции (например, использование флага)
+            if not self.is_paused:
+                self.next_turn()
+                time.sleep(1)
+
+    def toggle_pause(self):
+        """Переключить состояние паузы."""
+        self.is_paused = not self.is_paused
+        if self.is_paused:
+            print("\nСимуляция приостановлена. Нажмите ПРОБЕЛ для продолжения.")
+        else:
+            print("\nСимуляция возобновлена.")
+
+    def stop_simulation(self):
+        """Остановить симуляцию."""
+        self.is_running = False
+        print("\nСимуляция остановлена.")
