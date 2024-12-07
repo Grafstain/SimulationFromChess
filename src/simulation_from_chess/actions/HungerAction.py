@@ -8,7 +8,8 @@ class HungerAction(Action):
 
     def execute(self, board):
         """Наносит урон от голода всем существам на поле."""
-        print("Checking hunger...")
+        print("Проверка голода существ...")
         for entity in board.entities.values():
             if isinstance(entity, Creature):
-                entity.take_damage(self.hunger_damage) 
+                entity.take_damage(self.hunger_damage)
+                print(f"{entity} получил {self.hunger_damage} урона от голода. Текущее HP: {entity.hp}") 

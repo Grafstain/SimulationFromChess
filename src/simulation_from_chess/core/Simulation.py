@@ -1,5 +1,6 @@
 from .Board import Board
 from ..renderers.BoardConsoleRenderer import BoardConsoleRenderer
+from ..config import SIMULATION_CONFIG
 import time
 import keyboard
 
@@ -13,6 +14,7 @@ class Simulation:
         self.turn_actions = []
         self.is_running = False
         self.is_paused = False
+        self.turn_delay = SIMULATION_CONFIG['turn_delay']
 
     def next_turn(self):
         """Просимулировать и отрендерить один ход."""
@@ -46,7 +48,7 @@ class Simulation:
 
             if not self.is_paused:
                 self.next_turn()
-                time.sleep(1)
+                time.sleep(self.turn_delay)
 
     def toggle_pause(self):
         """Переключить состояние паузы."""
