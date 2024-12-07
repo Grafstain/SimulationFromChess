@@ -1,9 +1,9 @@
-from .InitAction import InitAction
-from .MoveAction import MoveAction
-from .Action import Action
+from .SpawnAction import SpawnGrassAction
 
 __all__ = [
     'Action',
     'InitAction',
-    'MoveAction'
+    'MoveAction',
+    'SpawnGrassAction',
+    'HealthCheckAction'
 ]
