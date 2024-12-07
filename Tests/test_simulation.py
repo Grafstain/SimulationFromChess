@@ -9,6 +9,8 @@ from src.simulation_from_chess.entities import Herbivore, Predator, Grass
 from src.simulation_from_chess.actions import SpawnGrassAction
 from src.simulation_from_chess.actions.MoveAction import MoveAction
 from src.simulation_from_chess.actions.HealthCheckAction import HealthCheckAction
+from src.simulation_from_chess.actions.HungerAction import HungerAction
+from src.simulation_from_chess.config import CREATURE_CONFIG
 
 
 class TestSimulation(unittest.TestCase):
@@ -102,6 +104,47 @@ class TestSimulation(unittest.TestCase):
             self.simulation.toggle_pause()
         
         self.assertTrue(self.simulation.is_paused)
+
+    def test_config_initialization(self):
+        """Тест инициализации с конфигурацией."""
+        from src.simulation_from_chess.config import SIMULATION_CONFIG
+        
+        simulation = Simulation(board_size=SIMULATION_CONFIG['board_size'])
+        self.assertEqual(simulation.board.width, SIMULATION_CONFIG['board_size'])
+        self.assertEqual(simulation.board.height, SIMULATION_CONFIG['board_size'])
+
+    def test_creature_config(self):
+        """Тест конфигурации существ."""
+        herbivore = Herbivore(Coordinates(1, 1))
+        predator = Predator(Coordinates(2, 2))
+        
+        self.assertEqual(herbivore.hp, CREATURE_CONFIG['herbivore']['initial_hp'])
+        self.assertEqual(herbivore.speed, CREATURE_CONFIG['herbivore']['speed'])
+        self.assertEqual(predator.hp, CREATURE_CONFIG['predator']['initial_hp'])
+        self.assertEqual(predator.speed, CREATURE_CONFIG['predator']['speed'])
+
+    def test_full_turn_cycle(self):
+        """Тест полного цикла хода с учетом всех действий."""
+        from src.simulation_from_chess.config import SIMULATION_CONFIG
+        
+        self.simulation.turn_actions.extend([
+            SpawnGrassAction(
+                min_grass=SIMULATION_CONFIG['min_grass'],
+                spawn_chance=1.0  # Гарантированный спавн для тестирования
+            ),
+            MoveAction(),
+            HungerAction(hunger_damage=SIMULATION_CONFIG['hunger_damage']),
+            HealthCheckAction()
+        ])
+        
+        herbivore = Herbivore(Coordinates(1, 1))
+        initial_hp = herbivore.hp
+        self.simulation.board.set_piece(herbivore.coordinates, herbivore)
+        
+        self.simulation.next_turn()
+        
+        # Проверяем, что существо получило урон от голода
+        self.assertEqual(herbivore.hp, initial_hp - SIMULATION_CONFIG['hunger_damage'])
 
 
 if __name__ == '__main__':
