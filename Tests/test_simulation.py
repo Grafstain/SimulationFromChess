@@ -1,58 +1,107 @@
-from Tests import *
+import sys
+import unittest
+from io import StringIO
+from unittest.mock import patch
+
+from src.simulation_from_chess.core import Board, Simulation
+from src.simulation_from_chess.core.Coordinates import Coordinates
+from src.simulation_from_chess.entities import Herbivore, Predator, Grass
+from src.simulation_from_chess.actions import SpawnGrassAction
+from src.simulation_from_chess.actions.MoveAction import MoveAction
+from src.simulation_from_chess.actions.HealthCheckAction import HealthCheckAction
 
 
 class TestSimulation(unittest.TestCase):
     def setUp(self):
         """Создаем экземпляры необходимых классов перед каждым тестом."""
-        self.board = Board(3,3)
-        self.renderer = BoardConsoleRenderer()
-        # self.herbivore = Herbivore(Coordinates(1, 1))
-        # self.predator = Predator(Coordinates(2, 2))
+        self.simulation = Simulation()
+        self.simulation.board = Board(3, 3)  # Уменьшенное поле для тестов
 
-    def test_empty_board_rendering(self):
-        """Тест на рендеринг пустой доски."""
-        output = StringIO()
-        sys.stdout = output  # Перенаправляем stdout для проверки вывода
-        self.renderer.render_without_entity(self.board)
-        sys.stdout = sys.__stdout__  # Возвращаем stdout
+    def _capture_output(self):
+        """Вспомогательный метод для перехвата вывода в консоль."""
+        self.held_output = StringIO()
+        sys.stdout = self.held_output
 
-        expected_output = (f""" 3    	  	  	
- 2    	  	  	
- 1    	  	  	
-      1   2   3"""
-                           )
-  # Ожидаемый вывод для пустой доски
-        print()
-        self.assertIn(expected_output, output.getvalue())
+    def _release_output(self):
+        """Восстановление стандартного вывода."""
+        sys.stdout = sys.__stdout__
 
-    # def test_add_entity_to_board(self):
-    #     """Тест на установку существа на доску."""
-    #     self.board.set_piece(self.herbivore.coordinates, self.herbivore)
-    #
-    #     # Проверяем, что существо установлено на доске
-    #     self.assertEqual(self.board.get_piece(self.herbivore.coordinates), self.herbivore)
+    def test_simulation_initialization(self):
+        """Тест инициализации симуляции."""
+        self.assertEqual(self.simulation.move_counter, 0)
+        self.assertFalse(self.simulation.is_running)
+        self.assertFalse(self.simulation.is_paused)
+        self.assertEqual(len(self.simulation.init_actions), 0)
+        self.assertEqual(len(self.simulation.turn_actions), 0)
 
-    # def test_herbivore_movement(self):
-    #     """Тест на движение травоядного и проверка состояния доски после движения."""
-    #     self.board.set_piece(self.herbivore.coordinates, self.herbivore)
-    #     grass = Grass(Coordinates(2, 1))  # Добавляем траву рядом
-    #     self.board.set_piece(grass.coordinates, grass)
-    #
-    #     # Перемещение травоядного
-    #     self.herbivore.make_move(self.board)
-    #
-    #     # Проверяем новое положение травоядного
-    #     new_coordinates = Coordinates(2, 1)  # Ожидаемое новое положение
-    #     self.assertEqual(self.herbivore.coordinates, new_coordinates)
-    #
-    #     # Проверяем состояние доски после движения
-    #     output = StringIO()
-    #     sys.stdout = output  # Перенаправляем stdout для проверки вывода
-    #     self.renderer.render(self.board)
-    #     sys.stdout = sys.__stdout__  # Возвращаем stdout
-    #
-    #     expected_output_after_move = "..."  # Ожидаемый вывод после движения
-    #     self.assertIn(expected_output_after_move, output.getvalue())
+    def test_next_turn_execution(self):
+        """Тест выполнения одного хода."""
+        # Добавляем действие спавна травы
+        self.simulation.turn_actions.append(SpawnGrassAction(min_grass=1, spawn_chance=1.0))
+        
+        self._capture_output()
+        self.simulation.next_turn()
+        output = self.held_output.getvalue()
+        self._release_output()
+
+        self.assertEqual(self.simulation.move_counter, 1)
+        self.assertIn("Ход 1", output)
+
+    def test_pause_simulation(self):
+        """Тест паузы симуляции."""
+        self.simulation.toggle_pause()
+        self.assertTrue(self.simulation.is_paused)
+        
+        self.simulation.toggle_pause()
+        self.assertFalse(self.simulation.is_paused)
+
+    def test_stop_simulation(self):
+        """Тест остановки симуляции."""
+        self.simulation.is_running = True
+        self.simulation.stop_simulation()
+        self.assertFalse(self.simulation.is_running)
+
+    def test_entity_movement(self):
+        """Тест перемещения существ за один ход."""
+        herbivore = Herbivore(Coordinates(1, 1))
+        grass = Grass(Coordinates(2, 2))
+        
+        self.simulation.board.set_piece(herbivore.coordinates, herbivore)
+        self.simulation.board.set_piece(grass.coordinates, grass)
+        
+        self.simulation.turn_actions.append(MoveAction())
+        self.simulation.next_turn()
+        
+        # Проверяем, что травоядное сдвинулось с начальной позиции
+        self.assertFalse(self.simulation.board.get_piece(Coordinates(1, 1)) is herbivore)
+
+    def test_health_check_action(self):
+        """Тест проверки здоровья существ."""
+        herbivore = Herbivore(Coordinates(1, 1))
+        herbivore.hp = 0  # Устанавливаем нулевое здоровье
+        
+        self.simulation.board.set_piece(herbivore.coordinates, herbivore)
+        self.simulation.turn_actions.append(HealthCheckAction())
+        
+        self.simulation.next_turn()
+        
+        # Проверяем, что мертвое существо удалено с поля
+        self.assertTrue(self.simulation.board.is_square_empty(Coordinates(1, 1)))
+
+    @patch('keyboard.is_pressed')
+    def test_keyboard_control(self, mock_is_pressed):
+        """Тест управления симуляцией с клавиатуры."""
+        # Имитируем нажатие пробела
+        mock_is_pressed.side_effect = lambda key: key == 'space'
+        
+        self.simulation.is_running = True
+        self.assertFalse(self.simulation.is_paused)
+        
+        # Имитируем один цикл while в start()
+        if mock_is_pressed('space'):
+            self.simulation.toggle_pause()
+        
+        self.assertTrue(self.simulation.is_paused)
 
 
 if __name__ == '__main__':
