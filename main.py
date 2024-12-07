@@ -14,7 +14,8 @@ simulation.init_actions.extend([
     InitAction(
         herbivores=SIMULATION_CONFIG['initial_herbivores'],
         predators=SIMULATION_CONFIG['initial_predators'],
-        grass=SIMULATION_CONFIG['initial_grass']
+        grass=SIMULATION_CONFIG['initial_grass'],
+        stones=SIMULATION_CONFIG['initial_stones']
     )
 ])
 
