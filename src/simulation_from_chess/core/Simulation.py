@@ -5,8 +5,8 @@ import keyboard
 
 
 class Simulation:
-    def __init__(self):
-        self.board = Board()
+    def __init__(self, board_size=8):
+        self.board = Board(board_size, board_size)
         self.move_counter = 0
         self.renderer = BoardConsoleRenderer()
         self.init_actions = []
