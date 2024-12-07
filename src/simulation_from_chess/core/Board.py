@@ -1,8 +1,5 @@
-import random
-from typing import Dict
-
-from ..core import Coordinates
-from ..entities import Entity, Grass, Herbivore, Predator, Stone
+from . import Coordinates
+from ..core import *
 
 
 class Board:

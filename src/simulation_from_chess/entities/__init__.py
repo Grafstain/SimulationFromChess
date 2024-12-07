@@ -1,5 +1,3 @@
-from ..entities import *
-
 __all__ = [
     'Entity',
     'Creature', 
