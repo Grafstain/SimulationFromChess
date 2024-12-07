@@ -1,5 +1,5 @@
 from abc import ABC
-from Coordinates import Coordinates
+from ..core import Coordinates
 
 
 class Entity(ABC):

@@ -1,9 +1,5 @@
-from entities.Grass import Grass
-from entities.Stone import Stone
-from Board import Board
-from Coordinates import Coordinates
-from entities.Herbivore import Herbivore
-from entities.Predator import Predator
+from ..entities import *
+from ..core import *
 
 
 class BoardConsoleRenderer:

@@ -1,4 +1,4 @@
-from Action import Action
+from ..actions import *
 
 
 class InitAction(Action):

@@ -1,5 +1,5 @@
 from .Board import Board
-from .BoardConsoleRenderer import BoardConsoleRenderer
+from ..renderers import BoardConsoleRenderer
 
 
 class Simulation:
