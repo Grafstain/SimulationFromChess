@@ -124,18 +124,92 @@ class TestMovement(unittest.TestCase):
         )
 
     def test_boundary_movement(self):
-        """Тест поведения существа у границы доски."""
-        herbivore = Herbivore(Coordinates(1, 1))
-        grass = Grass(Coordinates(1, 2))
+        """Тест перемещения у границ поля."""
+        predator = Predator(Coordinates(0, 0))  # Угол поля
+        herbivore = Herbivore(Coordinates(2, 2))
         
+        self.board.set_piece(predator.coordinates, predator)
         self.board.set_piece(herbivore.coordinates, herbivore)
+        
+        # Проверяем доступные ходы у границы
+        predator.update_available_moves(self.board)
+        
+        # Проверяем, что нет ходов за пределы поля
+        for move in predator.available_moves:
+            self.assertTrue(0 <= move.x < self.board.width)
+            self.assertTrue(0 <= move.y < self.board.height)
+        
+        # Проверяем перемещение
+        predator.make_move(self.board)
+        self.assertTrue(
+            0 <= predator.coordinates.x < self.board.width and
+            0 <= predator.coordinates.y < self.board.height
+        )
+
+    def test_clear_path_check(self):
+        """Тест проверки чистого пути до цели."""
+        predator = Predator(Coordinates(1, 1))
+        herbivore = Herbivore(Coordinates(4, 4))
+        stone = Stone(Coordinates(2, 2))
+        
+        self.board.set_piece(predator.coordinates, predator)
+        self.board.set_piece(herbivore.coordinates, herbivore)
+        self.board.set_piece(stone.coordinates, stone)
+        
+        # Проверяем, что путь через камень недоступен
+        self.assertFalse(predator.has_clear_path(self.board, Coordinates(3, 3)))
+        
+        # Проверяем, что обходной путь доступен
+        self.assertTrue(predator.has_clear_path(self.board, Coordinates(1, 2)))
+        self.assertTrue(predator.has_clear_path(self.board, Coordinates(2, 1)))
+
+    def test_occupied_square_movement(self):
+        """Тест попытки перемещения на занятую клетку."""
+        herbivore1 = Herbivore(Coordinates(1, 1))
+        herbivore2 = Herbivore(Coordinates(2, 2))
+        grass = Grass(Coordinates(3, 3))
+        
+        self.board.set_piece(herbivore1.coordinates, herbivore1)
+        self.board.set_piece(herbivore2.coordinates, herbivore2)
         self.board.set_piece(grass.coordinates, grass)
         
-        herbivore.make_move(self.board)
+        # Проверяем доступные ходы
+        herbivore1.update_available_moves(self.board)
         
-        # Проверяем, что существо не вышло за пределы доски
-        self.assertTrue(1 <= herbivore.coordinates.x <= self.board.width)
-        self.assertTrue(1 <= herbivore.coordinates.y <= self.board.height)
+        # Проверяем, что занятая клетка не входит в доступные ходы
+        self.assertNotIn(herbivore2.coordinates, herbivore1.available_moves)
+        
+        # Проверяем, что существо выбирает свободный путь
+        old_coords = herbivore1.coordinates
+        herbivore1.make_move(self.board)
+        self.assertNotEqual(herbivore1.coordinates, herbivore2.coordinates)
+
+    def test_path_finding_with_obstacles(self):
+        """Тест поиска пути с учетом препятствий."""
+        predator = Predator(Coordinates(1, 1))
+        herbivore = Herbivore(Coordinates(4, 4))
+        stones = [
+            Stone(Coordinates(2, 2)),
+            Stone(Coordinates(3, 3))
+        ]
+        
+        self.board.set_piece(predator.coordinates, predator)
+        self.board.set_piece(herbivore.coordinates, herbivore)
+        for stone in stones:
+            self.board.set_piece(stone.coordinates, stone)
+        
+        # Проверяем доступные ходы
+        predator.update_available_moves(self.board)
+        
+        # Проверяем, что заблокированные камнями клетки не входят в доступные ходы
+        self.assertNotIn(Coordinates(2, 2), predator.available_moves)
+        self.assertNotIn(Coordinates(3, 3), predator.available_moves)
+        
+        # Проверяем, что существо выбирает обходной путь
+        predator.make_move(self.board)
+        self.assertTrue(
+            predator.coordinates in [Coordinates(1, 3), Coordinates(3, 1)]
+        )
 
 
 if __name__ == '__main__':
