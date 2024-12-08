@@ -24,7 +24,7 @@ class TestHunger(unittest.TestCase):
         self.assertEqual(initial_hp, CREATURE_CONFIG['herbivore']['initial_hp'])
 
     def test_multiple_creatures_hunger(self):
-        """Тест урона от голода для нескольких существ."""
+        """Тест урона от голода ��ля нескольких существ."""
         herbivore = Herbivore(Coordinates(1, 1))
         predator = Predator(Coordinates(2, 2))
         
@@ -48,7 +48,7 @@ class TestHunger(unittest.TestCase):
         self.board.set_piece(herbivore.coordinates, herbivore)
         self.board.set_piece(grass.coordinates, grass)
         
-        herbivore.eat(grass)
+        herbivore.interact_with_target(self.board, grass)
         
         # Проверяем восстановление HP
         self.assertEqual(herbivore.hp, 
@@ -63,12 +63,13 @@ class TestHunger(unittest.TestCase):
         # Наносим урон хищнику
         predator.take_damage(5)
         initial_predator_hp = predator.hp
+        initial_herbivore_hp = herbivore.hp
         
         self.board.set_piece(predator.coordinates, predator)
         self.board.set_piece(herbivore.coordinates, herbivore)
         
-        predator.attack(herbivore)
+        predator.interact_with_target(self.board, herbivore)
         
         # Проверяем урон травоядному
         self.assertEqual(herbivore.hp, 
-                        CREATURE_CONFIG['herbivore']['initial_hp'] - CREATURE_CONFIG['predator']['attack_damage']) 
+                        initial_herbivore_hp - CREATURE_CONFIG['predator']['attack_damage']) 
