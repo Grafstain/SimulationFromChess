@@ -11,11 +11,8 @@ class InitAction(Action):
         self.initial_grass = grass
         self.initial_stones = stones
 
-    def execute(self, board):
+    def execute(self, board, logger):
         """Инициализация доски начальными сущностями."""
-        print("Initializing board with entities...")
-        
-        # Вынесем логику размещения в отдельный метод
         self._place_entities(board, Herbivore, self.initial_herbivores)
         self._place_entities(board, Predator, self.initial_predators)
         self._place_entities(board, Grass, self.initial_grass)

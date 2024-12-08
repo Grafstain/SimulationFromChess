@@ -1,12 +1,14 @@
 from .Board import Board
 from ..renderers.BoardConsoleRenderer import BoardConsoleRenderer
 from ..config import SIMULATION_CONFIG
+from ..utils.Logger import Logger
 import time
 import keyboard
 
 
 class Simulation:
     def __init__(self, board_size=8):
+        self.logger = Logger()
         self.board = Board(board_size, board_size)
         self.move_counter = 0
         self.renderer = BoardConsoleRenderer()
@@ -18,24 +20,23 @@ class Simulation:
 
     def next_turn(self):
         """Просимулировать и отрендерить один ход."""
-        print(f"\nХод {self.move_counter + 1}:")
+        print(f"\nХод {self.move_counter + 1}")
+        self.logger.actions_log.clear()
 
         for action in self.turn_actions:
-            action.execute(self.board)
+            action.execute(self.board, self.logger)
 
+        self.logger.log_creatures_state(self.board.entities)
         self.renderer.render(self.board)
-        self.renderer.display_common_creature_info(self.board)
         self.move_counter += 1
 
     def start(self):
         """Запустить бесконечный цикл симуляции и рендеринга."""
-        print("Начало симуляции...")
-        print("Управление:")
-        print("  ПРОБЕЛ - пауза/продолжить")
-        print("  q - остановить симуляцию")
+        print("Начало симуляции")
+        print("Управление: ПРОБЕЛ - пауза/продолжить, q - остановить симуляцию")
 
         for action in self.init_actions:
-            action.execute(self.board)
+            action.execute(self.board, self.logger)
 
         self.is_running = True
         while self.is_running:

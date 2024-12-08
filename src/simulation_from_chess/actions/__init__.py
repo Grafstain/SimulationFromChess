@@ -1,5 +1,3 @@
-from .SpawnAction import SpawnGrassAction
-
 __all__ = [
     'Action',
     'InitAction',

@@ -3,6 +3,7 @@ from typing import Dict
 
 from src.simulation_from_chess.core.Coordinates import Coordinates
 from src.simulation_from_chess.entities import Entity, Herbivore, Predator, Grass, Stone
+from src.simulation_from_chess.utils.Logger import Logger
 
 
 class Board:
@@ -10,7 +11,6 @@ class Board:
         self.width = width
         self.height = height
         self.entities: Dict[Coordinates, Entity] = {}
-        # self.moves: List[Move] = []
 
     def set_piece(self, coordinates: Coordinates, entity: Entity):
         if not self.is_square_empty(coordinates):
@@ -38,27 +38,23 @@ class Board:
             Coordinates(5, 2)
         ]
 
+        # Установка травоядных
+        for coord in fixed_herbivores_positions:
+            if self.is_square_empty(coord):
+                herbivore = Herbivore(coord)
+                self.set_piece(coord, herbivore)
+
         fixed_predators_positions = [
             Coordinates(6, 1),
             Coordinates(7, 3),
             Coordinates(8, 5)
         ]
 
-        # Установка травоядных
-        for coord in fixed_herbivores_positions:
-            if self.is_square_empty(coord):
-                herbivore = Herbivore(coord)
-                self.set_piece(coord, herbivore)
-            else:
-                print(f"Cannot place herbivore at {coord}, square is already occupied.")
-
         # Установка хищников
         for coord in fixed_predators_positions:
             if self.is_square_empty(coord):
                 predator = Predator(coord)
                 self.set_piece(coord, predator)
-            else:
-                print(f"Cannot place predator at {coord}, square is already occupied.")
 
     def setup_random_positions(self):
         herbivores_count = 5

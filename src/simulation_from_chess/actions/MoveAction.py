@@ -4,14 +4,13 @@ from ..entities.Predator import Predator
 
 
 class MoveAction(Action):
-    def execute(self, board):
+    def execute(self, board, logger):
         """Перемещение всех существ на поле."""
-        print("Перемещение существ...")
-        # Создаем копию списка сущностей перед итерацией
         entities = list(board.entities.values())
         for entity in entities:
             if isinstance(entity, (Herbivore, Predator)):
                 old_coords = entity.coordinates
                 entity.make_move(board)
                 if old_coords != entity.coordinates:
-                    print(f"{entity} переместился с {old_coords} на {entity.coordinates}")
+                    logger.log_action(entity, "Перемещение", 
+                        f"с ({old_coords.x}, {old_coords.y}) на ({entity.coordinates.x}, {entity.coordinates.y})")

@@ -1,5 +1,5 @@
 from src.simulation_from_chess.core import *
-from src.simulation_from_chess.actions import SpawnGrassAction
+from src.simulation_from_chess.actions.SpawnGrassAction import SpawnGrassAction
 from src.simulation_from_chess.actions.HealthCheckAction import HealthCheckAction
 from src.simulation_from_chess.actions.InitAction import InitAction
 from src.simulation_from_chess.actions.MoveAction import MoveAction
@@ -33,8 +33,8 @@ try:
     simulation.start()
 except KeyboardInterrupt:
     simulation.stop_simulation()
-except Exception as e:
-    print(f"Произошла ошибка: {e}")
-    simulation.stop_simulation()
+# except Exception as e:
+#     print(f"Произ��шла ошибка: {e.}")
+#     simulation.stop_simulation()
 finally:
     print("Программа завершена.")
