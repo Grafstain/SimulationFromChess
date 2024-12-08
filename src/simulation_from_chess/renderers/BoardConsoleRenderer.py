@@ -8,6 +8,7 @@ class BoardConsoleRenderer:
     ANSI_BLACK_SQUARE_BACKGROUND = "\u001B[0;100m"
     WIDE_SPACE = '\u2005'
     EN_SPACE = "\u2002"
+    EMPTY_CELL = f"  {WIDE_SPACE}{EN_SPACE} "
 
     def get_background_color(self, coordinates: Coordinates) -> str:
         """Возвращает цвет фона для клетки."""
@@ -18,8 +19,8 @@ class BoardConsoleRenderer:
     def get_entity_symbol(self, entity) -> str:
         """Возвращает символ для сущности."""
         if entity is None:
-            return f"   {self.WIDE_SPACE}{self.EN_SPACE}"  # Три специальных пробела
-        return f" {self.select_ascii_sprite_for_entity(entity)} "  # Существо между пробелами
+            return self.EMPTY_CELL
+        return f" {self.select_ascii_sprite_for_entity(entity)} "
 
     def render(self, board):
         """Отрисовка игрового поля."""
@@ -42,26 +43,31 @@ class BoardConsoleRenderer:
         # Выводим поле
         rendered_board = "\n".join(output)
         print(rendered_board)
-        print()  # Пустая строка для разделения с логом
+        print()  
         
         return rendered_board
 
     def render_without_entity(self, board):
         """Рендерит только пустую доску без существ"""
+        output = []
         for rank in range(board.height, 0, -1):
-            line = f"{rank:2}"
-            for file in range(1, board.width+1):
+            row = f"{rank:2d} "
+            for file in range(1, board.width + 1):
                 coordinates = Coordinates(file, rank)
-                line += self.get_sprite_for_empty_square(coordinates)
-            line += self.ANSI_RESET
-            print(line)
-        header = "    " + " ".join(f"{i + 1:3}" for i in range(board.width))
-        print(header)
-
-    def get_sprite_for_empty_square(self, coordinates: Coordinates) -> str:
-        """Возвращает спрайт для пустой клетки."""
-        background_color = self.get_background_color(coordinates)
-        return f"{background_color}{self.EM_SPACE}{self.EM_SPACE}{self.EM_SPACE}{self.ANSI_RESET}"
+                bg_color = self.get_background_color(coordinates)
+                cell = f"{bg_color}{self.EMPTY_CELL}{self.ANSI_RESET}"
+                row += cell
+            output.append(row)
+        
+        # Добавление нумерации столбцов
+        col_numbers = "     " + f"  {self.WIDE_SPACE}{self.EN_SPACE}".join(f"{x}" for x in range(1, board.width + 1))
+        output.append(col_numbers)
+        
+        # Выводим поле
+        rendered_board = "\n".join(output)
+        print(rendered_board)
+        
+        return rendered_board
 
     def select_ascii_sprite_for_entity(self, entity) -> str:
         """Возвращает символ для сущности."""
@@ -91,7 +97,7 @@ class BoardConsoleRenderer:
 
     @staticmethod
     def display_common_creature_info(board):
-        print("Объек��ы на поле:")
+        print("Объекты на поле:")
         herbivore_count = sum(1 for entity in board.entities.values() if isinstance(entity, Herbivore))
         predator_count = sum(1 for entity in board.entities.values() if isinstance(entity, Predator))
         grass_count = sum(1 for entity in board.entities.values() if isinstance(entity, Grass))
