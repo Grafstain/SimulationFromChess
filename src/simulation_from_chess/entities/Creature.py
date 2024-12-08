@@ -5,9 +5,17 @@ from ..entities.Entity import Entity
 
 class Creature(Entity):
     def __init__(self, coordinates: Coordinates, speed: int, hp: int):
+        """
+        Инициализация базового класса существа.
+        
+        Args:
+            coordinates (Coordinates): Координаты существа
+            speed (int): Скорость передвижения
+            hp (int): Начальное количество здоровья
+        """
         super().__init__(coordinates)
-        self.speed = speed  # Скорость передвижения
-        self.hp = hp  # Очки здоровья
+        self.speed = speed
+        self.hp = hp
         self.available_moves = []
 
     def update_available_moves(self, board):
@@ -57,7 +65,6 @@ class Creature(Entity):
         closest_food = None
         min_distance = float('inf')
         
-        # Проверяем все сущности на доске вместо только доступных ��одов
         for coordinates, entity in board.entities.items():
             if isinstance(entity, food_type):
                 distance = abs(coordinates.x - self.coordinates.x) + abs(coordinates.y - self.coordinates.y)
@@ -73,9 +80,21 @@ class Creature(Entity):
         target = self.find_closest_food(board, self.target_type)
         
         if target:
+            distance = abs(target.x - self.coordinates.x) + abs(target.y - self.coordinates.y)
+            
+            if distance <= 1:  # Если цель рядом
+                target_entity = board.get_piece(target)
+                if target_entity:
+                    success, actions = self.interact_with_target(board, target_entity)
+                    return actions if success else []
+            # Если цель далеко или взаимодействие не произошло, двигаемся к ней
             best_move = self.find_best_move_towards(board, target)
             if best_move:
+                old_coords = self.coordinates
                 self.perform_move(board, best_move)
+                if old_coords != self.coordinates:
+                    return [("Перемещение", f"из ({old_coords.x}, {old_coords.y}) в ({self.coordinates.x}, {self.coordinates.y})")]
+        return []
 
     def find_best_move_towards(self, board, target):
         """Находит оптимальный ход в направлении цели."""
@@ -96,9 +115,11 @@ class Creature(Entity):
         board.remove_piece(old_coordinates)
         board.set_piece(new_coordinates, self)
         self.coordinates = new_coordinates
-        print(f"{self} moved from {old_coordinates} to {new_coordinates}")
 
     def take_damage(self, damage):
         """Получение урона существом."""
         self.hp -= damage
-        print(f"{self} получил {damage} урона. Осталось HP: {self.hp}")
+
+    def interact_with_target(self, board, target):
+        """Абстрактный метод взаимодействия с целью."""
+        raise NotImplementedError("Subclasses should implement this method.")

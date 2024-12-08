@@ -9,8 +9,7 @@ class MoveAction(Action):
         entities = list(board.entities.values())
         for entity in entities:
             if isinstance(entity, (Herbivore, Predator)):
-                old_coords = entity.coordinates
-                entity.make_move(board)
-                if old_coords != entity.coordinates:
-                    logger.log_action(entity, "Перемещение", 
-                        f"с ({old_coords.x}, {old_coords.y}) на ({entity.coordinates.x}, {entity.coordinates.y})")
+                actions = entity.make_move(board)
+                for action in actions:
+                    if isinstance(action, tuple) and len(action) == 2:
+                        logger.log_action(entity, action[0], action[1])

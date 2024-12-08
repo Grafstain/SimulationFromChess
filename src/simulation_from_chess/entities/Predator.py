@@ -1,6 +1,6 @@
 from ..core import Coordinates
-from ..entities.Herbivore import Herbivore
 from ..entities.Creature import Creature
+from ..entities.Herbivore import Herbivore
 from ..config import CREATURE_CONFIG
 
 
@@ -15,17 +15,24 @@ class Predator(Creature):
         self.target_type = Herbivore
         self.attack_damage = config['attack_damage']
         self.food_value = config['food_value']
+        self.max_hp = config['initial_hp']
 
     def __repr__(self):
-        return f"Predator"
+        return "Predator"
 
-    def attack(self, target):
-        """Атака цели."""
-        target.take_damage(self.attack_damage)
-        if target.hp <= 0:
-            self.hp = min(CREATURE_CONFIG['predator']['initial_hp'],
-                         self.hp + self.food_value)
-            print(f"{self} съел {target} и восстановил {self.food_value} HP. Текущее HP: {self.hp}")
-
-
+    def interact_with_target(self, board, target):
+        """Атака травоядного хищником."""
+        if isinstance(target, self.target_type):
+            target.take_damage(self.attack_damage)
+            actions = [("Атаковал", f"травоядного на ({target.coordinates.x}, {target.coordinates.y})")]
+            
+            if target.hp <= 0:
+                old_hp = self.hp
+                self.hp = min(self.max_hp, self.hp + self.food_value)
+                healed = self.hp - old_hp
+                if healed > 0:
+                    actions.append(("Съел", f"травоядного на ({target.coordinates.x}, {target.coordinates.y})"))
+                board.remove_piece(target.coordinates)
+            return True, actions
+        return False, []
 

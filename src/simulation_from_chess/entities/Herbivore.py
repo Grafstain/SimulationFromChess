@@ -14,13 +14,21 @@ class Herbivore(Creature):
         )
         self.target_type = Grass
         self.food_value = config['food_value']
+        self.max_hp = config['initial_hp']
 
     def __repr__(self):
-        return f"Herbivore"
+        return "Herbivore"
 
-    def eat(self, food):
-        """Восстановление HP при поедании травы."""
-        self.hp = min(CREATURE_CONFIG['herbivore']['initial_hp'],
-                     self.hp + self.food_value)
-        print(f"{self} съел {food} и восстановил {self.food_value} HP. Текущее HP: {self.hp}")
+    def interact_with_target(self, board, target):
+        """Поедание травы травоядным."""
+        if isinstance(target, self.target_type):
+            old_hp = self.hp
+            self.hp = min(self.max_hp, self.hp + self.food_value)
+            healed = self.hp - old_hp
+            board.remove_piece(target.coordinates)
+            actions = []
+            if healed > 0:
+                actions.append(("Съел", f"траву на ({target.coordinates.x}, {target.coordinates.y})"))
+            return True, actions
+        return False, []
 

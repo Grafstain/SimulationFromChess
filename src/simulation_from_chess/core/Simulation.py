@@ -26,8 +26,8 @@ class Simulation:
         for action in self.turn_actions:
             action.execute(self.board, self.logger)
 
-        self.logger.log_creatures_state(self.board.entities)
         self.renderer.render(self.board)
+        self.logger.log_creatures_state(self.board.entities)
         self.move_counter += 1
 
     def start(self):
