@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from io import StringIO
 
-from src.simulation_from_chess.utils.Logger import Logger
+from src.simulation_from_chess.utils.logger import Logger
 from src.simulation_from_chess.entities.herbivore import Herbivore
 from src.simulation_from_chess.entities.predator import Predator
 from src.simulation_from_chess.core.coordinates import Coordinates

@@ -3,7 +3,7 @@ from typing import Dict, List
 
 from ..core.coordinates import Coordinates
 from ..entities import *
-from src.simulation_from_chess.utils.Logger import Logger
+from src.simulation_from_chess.utils.logger import Logger
 
 
 class Board:

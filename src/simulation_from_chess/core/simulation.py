@@ -1,7 +1,7 @@
 from .board import Board
 from ..renderers.board_console_renderer import BoardConsoleRenderer
 from ..config import SIMULATION_CONFIG
-from ..utils.Logger import Logger
+from ..utils.logger import Logger
 import time
 import keyboard
 
