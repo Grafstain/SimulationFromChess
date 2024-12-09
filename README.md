@@ -1,6 +1,3 @@
-Подготовлю обновленный README.md:
-
-```markdown
 # Симуляция Жизни
 ![Симуляция](docs/images/TigerRabbit.png)
 
@@ -23,7 +20,6 @@
 
 ### Процесс симуляции
 ![Процесс](docs/images/Screenshot_2.png)
-![Процесс](docs/images/Screenshot_3.png)
 
 ## Установка
 
@@ -120,11 +116,5 @@ pytest --cov=src.simulation_from_chess --cov-report=html
 ## Благодарности
 - [Сергей Жуков](https://github.com/zhukovsd) - автор оригинальной идеи и курса
 - [Python Backend Learning Course](https://zhukovsd.github.io/python-backend-learning-course/)
-```
 
-Примечания:
-1. Создайте директорию `docs/images/` для скриншотов
-2. Добавьте актуальные скриншоты и GIF симуляции
-3. Обновите ссылку на ваш репозиторий
-4. Создайте файл requirements.txt с зависимостями
-5. При необходимости добавьте дополнительные разделы
+
