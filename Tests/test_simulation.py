@@ -158,20 +158,27 @@ class TestSimulation(unittest.TestCase):
         for action in self.simulation.init_actions:
             action.execute(self.simulation.board, self.simulation.logger)
         
-        # Находим созданные существа
-        herbivore = None
-        predator = None
+        # Подсчитываем количество каждого типа существ
+        herbivore_count = 0
+        predator_count = 0
+        
         for entity in self.simulation.board.entities.values():
             if isinstance(entity, Herbivore):
                 herbivore = entity
+                herbivore_count += 1
             elif isinstance(entity, Predator):
                 predator = entity
+                predator_count += 1
         
-        # Проверяем начальные значения HP
-        self.assertIsNotNone(herbivore, "Травоядное не было создано")
-        self.assertIsNotNone(predator, "Хищник не был создан")
-        self.assertEqual(herbivore.hp, CREATURE_CONFIG['herbivore']['initial_hp'])
-        self.assertEqual(predator.hp, CREATURE_CONFIG['predator']['initial_hp'])
+        # Проверяем, что создано правильное количество существ
+        self.assertEqual(herbivore_count, 1, "Должно быть создано ровно одно травоядное")
+        self.assertEqual(predator_count, 1, "Должен быть создан ровно один хищник")
+        
+        # Проверяем начальные значения HP только если существа были созданы
+        if herbivore_count > 0:
+            self.assertEqual(herbivore.hp, CREATURE_CONFIG['herbivore']['initial_hp'])
+        if predator_count > 0:
+            self.assertEqual(predator.hp, CREATURE_CONFIG['predator']['initial_hp'])
 
 
 if __name__ == '__main__':
