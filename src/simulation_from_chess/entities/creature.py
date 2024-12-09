@@ -29,8 +29,8 @@ class Creature(Entity):
                 new_y = self.coordinates.y + dy
                 new_coords = Coordinates(new_x, new_y)
                 
-                # Проверяем, что ход в пределах доски и позиция с��ободна
-                if (board.is_within_bounds(new_coords) and 
+                # Проверяем, что ход в пределах доски и позиция свободна
+                if (board.is_valid_coordinates(new_coords) and 
                     board.is_position_vacant(new_coords)):
                     self.available_moves.append(new_coords)
 
