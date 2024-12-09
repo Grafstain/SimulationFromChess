@@ -80,9 +80,14 @@ class BoardConsoleRenderer:
         if isinstance(entity, Stone):
             return "🌑"
 
+    @staticmethod
+    def is_square_dark(coordinates: Coordinates) -> bool:
+        """Определяет, является ли клетка темной."""
+        return (coordinates.x + coordinates.y) % 2 == 0
+
     def get_entity_sprite(self, entity) -> str:
         sprite = f" {self.select_ascii_sprite_for_entity(entity)} "
-        background_color = self.ANSI_BLACK_SQUARE_BACKGROUND if Board.is_square_dark(
+        background_color = self.ANSI_BLACK_SQUARE_BACKGROUND if self.is_square_dark(
             entity.coordinates) else self.ANSI_WHITE_SQUARE_BACKGROUND
         return f"{background_color}{sprite}"
 
