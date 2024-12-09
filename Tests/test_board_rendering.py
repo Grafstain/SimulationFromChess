@@ -2,10 +2,13 @@ import sys
 import unittest
 from io import StringIO
 
-from src.simulation_from_chess import*
-from src.simulation_from_chess.core import board, coordinates
-from src.simulation_from_chess.entities import herbivore, grass, predator
-from src.simulation_from_chess.renderers import board_console_renderer
+from src.simulation_from_chess import (
+    Board, 
+    Coordinates, 
+    BoardConsoleRenderer,
+    Herbivore,
+    Grass
+)
 
 
 class TestBoardRendering(unittest.TestCase):
@@ -52,7 +55,7 @@ class TestBoardRendering(unittest.TestCase):
         return f"{col_numbers}\n"
 
     def test_empty_board_rendering(self):
-        """Те��т на рендеринг пустой доски размером 3x3."""
+        """Тест на рендеринг пустой доски размером 3x3."""
         render_result = self._capture_render_output(
             self.renderer.render_without_entity,
             self.board

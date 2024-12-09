@@ -1,6 +1,6 @@
 from random import randint
 from ..actions.action import Action
-from ..entities import herbivore, predator, grass, stone
+from ..entities import *
 from ..core.coordinates import Coordinates
 
 
@@ -21,14 +21,22 @@ class InitAction(Action):
     def _place_entities(self, board, entity_class, count):
         """Вспомогательный метод для размещения сущностей на доске."""
         entity_name = entity_class.__name__.lower()
+        attempts = 0
+        max_attempts = board.width * board.height  # Максимальное количество попыток
+        
         for _ in range(count):
-            while True:
-                x = randint(0, board.width - 1)
-                y = randint(0, board.height - 1)
+            attempts = 0
+            while attempts < max_attempts:
+                x = randint(1, board.width)  # Изменено с 0 на 1
+                y = randint(1, board.height)  # Изменено с 0 на 1
                 coords = Coordinates(x, y)
                 if board.is_square_empty(coords):
                     board.set_piece(coords, entity_class(coords))
                     break
+                attempts += 1
+            
+            if attempts >= max_attempts:
+                print(f"Не удалось разместить {entity_name} после {max_attempts} попыток")
 
     def __repr__(self):
         return (f"InitAction(herbivores={self.initial_herbivores}, "

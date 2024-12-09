@@ -3,16 +3,21 @@ import unittest
 from io import StringIO
 from unittest.mock import patch
 
-from src.simulation_from_chess.core import board, coordinates, simulation
-from src.simulation_from_chess.entities import herbivore, grass, predator
-from src.simulation_from_chess.actions import (
-    spawn_grass_action,
-    move_action,
-    health_check_action,
-    hunger_action,
-    init_action
+from src.simulation_from_chess import (
+    Board,
+    Coordinates,
+    Simulation,
+    Herbivore,
+    Predator,
+    Grass,
+    SpawnGrassAction,
+    MoveAction,
+    HealthCheckAction,
+    HungerAction,
+    InitAction,
+    SIMULATION_CONFIG,
+    CREATURE_CONFIG
 )
-from src.simulation_from_chess.config import SIMULATION_CONFIG, CREATURE_CONFIG
 
 
 class TestSimulation(unittest.TestCase):
@@ -144,6 +149,7 @@ class TestSimulation(unittest.TestCase):
 
     def test_initial_creature_stats(self):
         """Тест начальных параметров существ при инициализации."""
+        # Инициализируем симуляцию с фиксированными значениями
         self.simulation.init_actions.extend([
             InitAction(herbivores=1, predators=1, grass=1)
         ])

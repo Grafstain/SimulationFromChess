@@ -1,10 +1,12 @@
-from src.simulation_from_chess.core import *
-from src.simulation_from_chess.actions.spawn_grass_action import SpawnGrassAction
-from src.simulation_from_chess.actions.health_check_action import HealthCheckAction
-from src.simulation_from_chess.actions.init_action import InitAction
-from src.simulation_from_chess.actions.move_action import MoveAction
-from src.simulation_from_chess.actions.hunger_action import HungerAction
-from src.simulation_from_chess.config import SIMULATION_CONFIG
+from src.simulation_from_chess import (
+    Simulation,
+    SpawnGrassAction,
+    MoveAction,
+    HealthCheckAction,
+    HungerAction,
+    InitAction,
+    SIMULATION_CONFIG
+)
 
 # Создание симуляции с настроенным размером поля
 simulation = Simulation(board_size=SIMULATION_CONFIG['board_size'])
@@ -34,7 +36,7 @@ try:
 except KeyboardInterrupt:
     simulation.stop_simulation()
 # except Exception as e:
-#     print(f"Произ��шла ошибка: {e.}")
+#     print(f"Произшла ошибка: {e.}")
 #     simulation.stop_simulation()
 finally:
     print("Программа завершена.")

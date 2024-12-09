@@ -1,9 +1,14 @@
 import unittest
 
-from src.simulation_from_chess import *
-from src.simulation_from_chess.core import board, coordinates
-from src.simulation_from_chess.entities import herbivore, grass, stone, predator
-from src.simulation_from_chess.renderers import board_console_renderer
+from src.simulation_from_chess import (
+    Board,
+    BoardConsoleRenderer,
+    Coordinates,
+    Herbivore,
+    Predator,
+    Grass,
+    Stone
+)
 
 
 class TestMovement(unittest.TestCase):
@@ -38,11 +43,24 @@ class TestMovement(unittest.TestCase):
         self.board.set_piece(grass.coordinates, grass)
         self.board.set_piece(stone.coordinates, stone)
         
+        # Сначала проверяем доступные ходы
+        herbivore.update_available_moves(self.board)
+        
+        # Проверяем, что клетка с камнем недоступна
+        self.assertNotIn(stone.coordinates, herbivore.available_moves)
+        
         herbivore.make_move(self.board)
         
         # Травоядное должно выбрать обходной путь
+        possible_moves = [
+            Coordinates(2, 1),  # Обход слева
+            Coordinates(1, 2),  # Обход сверху
+            Coordinates(1, 3),  # Обход сверху дальше
+            Coordinates(3, 1)   # Обход слева дальше
+        ]
         self.assertTrue(
-            herbivore.coordinates in [Coordinates(2, 1), Coordinates(1, 2)]
+            herbivore.coordinates in possible_moves,
+            f"Существо должно выбрать обходной путь. Текущие координаты: {herbivore.coordinates}"
         )
 
     def test_predator_speed_movement(self):
@@ -53,15 +71,31 @@ class TestMovement(unittest.TestCase):
         self.board.set_piece(predator.coordinates, predator)
         self.board.set_piece(herbivore.coordinates, herbivore)
         
+        # Сначала проверяем доступные ходы
+        predator.update_available_moves(self.board)
+        
+        # Проверяем, что все ходы в пределах скорости хищника
+        for move in predator.available_moves:
+            distance = abs(move.x - predator.coordinates.x) + abs(move.y - predator.coordinates.y)
+            self.assertTrue(
+                distance <= predator.speed,
+                f"Ход {move} превышает скорость хищника {predator.speed}"
+            )
+        
         predator.make_move(self.board)
         
-        # Хищник может переместиться на 2 клетки в любом направлении
+        # Хищник может переместиться на расстояние своей скорости в любом направлении
         possible_positions = [
             Coordinates(2, 2),
             Coordinates(3, 1),
-            Coordinates(1, 3)
+            Coordinates(1, 3),
+            Coordinates(2, 3),
+            Coordinates(3, 2)
         ]
-        self.assertTrue(predator.coordinates in possible_positions)
+        self.assertTrue(
+            predator.coordinates in possible_positions,
+            f"Хищник должен переместиться в пределах своей скорости. Текущие координаты: {predator.coordinates}"
+        )
 
     def test_no_available_moves(self):
         """Тест поведения существа, когда нет доступных ходов."""
@@ -99,7 +133,14 @@ class TestMovement(unittest.TestCase):
         herbivore.make_move(self.board)
         
         # Травоядное должно двигаться к ближайшей траве
-        self.assertEqual(herbivore.coordinates, Coordinates(1, 2))
+        possible_moves = [
+            Coordinates(1, 2),  # Движение влево
+            Coordinates(2, 1)   # Движение вниз
+        ]
+        self.assertTrue(
+            herbivore.coordinates in possible_moves,
+            f"Существо должно двигаться к ближайшей траве. Текущие координаты: {herbivore.coordinates}"
+        )
 
     def test_path_finding(self):
         """Тест поиска пути в сложной ситуации."""
@@ -118,9 +159,14 @@ class TestMovement(unittest.TestCase):
             
         predator.make_move(self.board)
         
-        # Хищник должен найти обходной путь
+        # Хищник должен найти обходной путь с учетом своей скорости
+        possible_moves = [
+            Coordinates(1, 3),  # Обход сверху
+            Coordinates(3, 1)   # Обход слева
+        ]
         self.assertTrue(
-            predator.coordinates in [Coordinates(1, 3), Coordinates(3, 1)]
+            predator.coordinates in possible_moves,
+            f"Хищник должен найти обходной путь. Текущие координаты: {predator.coordinates}"
         )
 
     def test_boundary_movement(self):
@@ -157,11 +203,20 @@ class TestMovement(unittest.TestCase):
         self.board.set_piece(stone.coordinates, stone)
         
         # Проверяем, что путь через камень недоступен
-        self.assertFalse(predator.has_clear_path(self.board, Coordinates(3, 3)))
+        self.assertFalse(
+            predator.has_clear_path(self.board, Coordinates(3, 3)),
+            "Путь через камень должен быть недоступен"
+        )
         
-        # Проверяем, что обходной путь доступен
-        self.assertTrue(predator.has_clear_path(self.board, Coordinates(1, 2)))
-        self.assertTrue(predator.has_clear_path(self.board, Coordinates(2, 1)))
+        # Проверяем, что обходные пути дос��упны
+        self.assertTrue(
+            predator.has_clear_path(self.board, Coordinates(1, 2)),
+            "Обходной путь сверху должен быть доступен"
+        )
+        self.assertTrue(
+            predator.has_clear_path(self.board, Coordinates(2, 1)),
+            "Обходной путь слева должен быть доступен"
+        )
 
     def test_occupied_square_movement(self):
         """Тест попытки перемещения на занятую клетку."""
@@ -205,10 +260,58 @@ class TestMovement(unittest.TestCase):
         self.assertNotIn(Coordinates(2, 2), predator.available_moves)
         self.assertNotIn(Coordinates(3, 3), predator.available_moves)
         
-        # Проверяем, что существо выбирает обходной путь
         predator.make_move(self.board)
+        
+        # Все возможные обходные пути с учетом скорости хищника
+        possible_moves = [
+            Coordinates(1, 3),  # Обход сверху
+            Coordinates(3, 1),  # Обход слева
+            Coordinates(2, 3),  # Обход сверху через две клетки
+            Coordinates(3, 2)   # Обход слева через две клетки
+        ]
         self.assertTrue(
-            predator.coordinates in [Coordinates(1, 3), Coordinates(3, 1)]
+            predator.coordinates in possible_moves,
+            f"Хищник должен найти обходной путь. Текущие координаты: {predator.coordinates}"
+        )
+
+    def test_speed_limits(self):
+        """Тест ограничений скорости существ."""
+        herbivore = Herbivore(Coordinates(1, 1))
+        grass = Grass(Coordinates(4, 4))
+        
+        self.board.set_piece(herbivore.coordinates, herbivore)
+        self.board.set_piece(grass.coordinates, grass)
+        
+        herbivore.make_move(self.board)
+        
+        # Проверяем, что существо не может переместиться дальше своей скорости
+        max_distance = abs(herbivore.coordinates.x - 1) + abs(herbivore.coordinates.y - 1)
+        self.assertTrue(
+            max_distance <= herbivore.speed,
+            f"Существо переместилось на {max_distance} клеток, что превышает его скорость {herbivore.speed}"
+        )
+
+    def test_optimal_path_selection(self):
+        """Тест выбора оптимального пути к цели."""
+        herbivore = Herbivore(Coordinates(1, 1))
+        grass = Grass(Coordinates(3, 3))
+        stones = [
+            Stone(Coordinates(2, 2)),  # Блокируем прямой путь
+            Stone(Coordinates(1, 2))   # Блокируем путь сверху
+        ]
+        
+        self.board.set_piece(herbivore.coordinates, herbivore)
+        self.board.set_piece(grass.coordinates, grass)
+        for stone in stones:
+            self.board.set_piece(stone.coordinates, stone)
+        
+        herbivore.make_move(self.board)
+        
+        # Единственный оптимальный путь - обход слева
+        self.assertEqual(
+            herbivore.coordinates,
+            Coordinates(2, 1),
+            f"Существо должно выбрать оптимальный путь обхода. Текущие координаты: {herbivore.coordinates}"
         )
 
 

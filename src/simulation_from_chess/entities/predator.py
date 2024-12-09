@@ -1,4 +1,4 @@
-from ..core import coordinates
+from ..core.coordinates import Coordinates
 from ..entities.creature import Creature
 from ..entities.herbivore import Herbivore
 from ..config import CREATURE_CONFIG
