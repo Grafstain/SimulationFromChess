@@ -25,7 +25,7 @@ class Herbivore(Creature):
             old_hp = self.hp
             self.hp = min(self.max_hp, self.hp + self.food_value)
             healed = self.hp - old_hp
-            board.remove_piece(target.coordinates)
+            board.remove_entity(target.coordinates)
             actions = []
             if healed > 0:
                 actions.append(("Съел", f"траву на ({target.coordinates.x}, {target.coordinates.y})"))

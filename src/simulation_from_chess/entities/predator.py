@@ -32,7 +32,7 @@ class Predator(Creature):
                 healed = self.hp - old_hp
                 if healed > 0:
                     actions.append(("Съел", f"травоядного на ({target.coordinates.x}, {target.coordinates.y})"))
-                board.remove_piece(target.coordinates)
+                board.remove_entity(target.coordinates)
             return True, actions
         return False, []
 
