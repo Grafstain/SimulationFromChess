@@ -1,14 +1,9 @@
 import unittest
 
-from src.simulation_from_chess import (
-    Board,
-    BoardConsoleRenderer,
-    Coordinates,
-    Herbivore,
-    Predator,
-    Grass,
-    Stone
-)
+from src.simulation_from_chess import *
+from src.simulation_from_chess.core import board, coordinates
+from src.simulation_from_chess.entities import herbivore, grass, stone, predator
+from src.simulation_from_chess.renderers import board_console_renderer
 
 
 class TestMovement(unittest.TestCase):
