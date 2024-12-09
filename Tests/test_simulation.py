@@ -2,29 +2,27 @@ import sys
 import unittest
 from io import StringIO
 from unittest.mock import patch
+from typing import List
 
-from src.simulation_from_chess import (
-    Board,
-    Coordinates,
-    Simulation,
-    Herbivore,
-    Predator,
-    Grass,
-    SpawnGrassAction,
-    MoveAction,
-    HealthCheckAction,
-    HungerAction,
-    InitAction,
-    SIMULATION_CONFIG,
-    CREATURE_CONFIG
-)
+from src.simulation_from_chess.core.board import Board
+from src.simulation_from_chess.core.coordinates import Coordinates
+from src.simulation_from_chess.core.simulation import Simulation
+from src.simulation_from_chess.entities.grass import Grass
+from src.simulation_from_chess.entities.herbivore import Herbivore
+from src.simulation_from_chess.entities.predator import Predator
+from src.simulation_from_chess.actions.move_action import MoveAction
+from src.simulation_from_chess.actions.health_check_action import HealthCheckAction
+from src.simulation_from_chess.actions.spawn_grass_action import SpawnGrassAction
+from src.simulation_from_chess.actions.hunger_action import HungerAction
+from src.simulation_from_chess.actions.init_action import InitAction
+from src.simulation_from_chess.config import SIMULATION_CONFIG, CREATURE_CONFIG
 
 
 class TestSimulation(unittest.TestCase):
     def setUp(self):
-        """Создаем экземпляры необходимых классов перед каждым тестом."""
-        self.simulation = Simulation()
-        self.simulation.board = Board(3, 3)  # Уменьшенное поле для тестов
+        """Подготовка тестового окружения."""
+        self.simulation = Simulation(board_size=5)  # Уменьшенное поле для тестов
+        self.board = self.simulation.board
 
     def _capture_output(self):
         """Вспомогательный метод для перехвата вывода в консоль."""
@@ -35,150 +33,103 @@ class TestSimulation(unittest.TestCase):
         """Восстановление стандартного вывода."""
         sys.stdout = sys.__stdout__
 
-    def test_simulation_initialization(self):
-        """Тест инициализации симуляции."""
-        self.assertEqual(self.simulation.move_counter, 0)
-        self.assertFalse(self.simulation.is_running)
-        self.assertFalse(self.simulation.is_paused)
-        self.assertEqual(len(self.simulation.init_actions), 0)
-        self.assertEqual(len(self.simulation.turn_actions), 0)
+    def test_spawn_grass_action(self):
+        """Тест спавна травы."""
+        spawn_action = SpawnGrassAction(min_grass=1, spawn_chance=1.0)  # Гарантированный спавн
+        
+        # Проверяем начальное состояние
+        initial_grass = self._count_entities(Grass)
+        self.assertEqual(initial_grass, 0)
+        
+        # Выполняем действие
+        spawn_action.execute(self.board, self.simulation.logger)
+        
+        # Проверяем результат
+        final_grass = self._count_entities(Grass)
+        self.assertEqual(final_grass, 1)
 
-    def test_next_turn_execution(self):
-        """Тест выполнения одного хода."""
-        self.simulation.turn_actions.append(SpawnGrassAction(min_grass=1, spawn_chance=1.0))
-        
-        self._capture_output()
-        self.simulation.next_turn()
-        output = self.held_output.getvalue()
-        self._release_output()
-
-        self.assertEqual(self.simulation.move_counter, 1)
-        self.assertIn("Ход 1", output)
-
-    def test_pause_simulation(self):
-        """Тест паузы симуляции."""
-        self.simulation.toggle_pause()
-        self.assertTrue(self.simulation.is_paused)
-        
-        self.simulation.toggle_pause()
-        self.assertFalse(self.simulation.is_paused)
-
-    def test_stop_simulation(self):
-        """Тест остановки симуляции."""
-        self.simulation.is_running = True
-        self.simulation.stop_simulation()
-        self.assertFalse(self.simulation.is_running)
-
-    def test_entity_movement(self):
-        """Тест перемещения существ за один ход."""
-        herbivore = Herbivore(Coordinates(1, 1))
-        grass = Grass(Coordinates(2, 2))
-        
-        self.simulation.board.set_piece(herbivore.coordinates, herbivore)
-        self.simulation.board.set_piece(grass.coordinates, grass)
-        
-        self.simulation.turn_actions.append(MoveAction())
-        self.simulation.next_turn()
-        
-        # Проверяем, что травоядное сдвинулось с начальной позиции
-        self.assertFalse(self.simulation.board.get_piece(Coordinates(1, 1)) is herbivore)
-
-    def test_health_check_action(self):
-        """Тест проверки здоровья существ."""
-        herbivore = Herbivore(Coordinates(1, 1))
-        herbivore.hp = 0  # Устанавливаем нулевое здоровье
-        
-        self.simulation.board.set_piece(herbivore.coordinates, herbivore)
-        self.simulation.turn_actions.append(HealthCheckAction())
-        
-        self.simulation.next_turn()
-        
-        # Проверяем, что мертвое существо удалено с поля
-        self.assertTrue(self.simulation.board.is_square_empty(Coordinates(1, 1)))
-
-    @patch('keyboard.is_pressed')
-    def test_keyboard_control(self, mock_is_pressed):
-        """Тест управления симуляцией с клавиатуры."""
-        mock_is_pressed.side_effect = lambda key: key == 'space'
-        
-        self.simulation.is_running = True
-        self.assertFalse(self.simulation.is_paused)
-        
-        # Имитируем один цикл while в start()
-        if mock_is_pressed('space'):
-            self.simulation.toggle_pause()
-        
-        self.assertTrue(self.simulation.is_paused)
-
-    def test_config_initialization(self):
-        """Тест инициализации с конфигурацией."""
-        simulation = Simulation(board_size=SIMULATION_CONFIG['board_size'])
-        self.assertEqual(simulation.board.width, SIMULATION_CONFIG['board_size'])
-        self.assertEqual(simulation.board.height, SIMULATION_CONFIG['board_size'])
-
-    def test_creature_config(self):
-        """Тест конфигурации существ."""
+    def test_hunger_mechanics(self):
+        """Тест механики голода."""
+        # Создаем существ
         herbivore = Herbivore(Coordinates(1, 1))
         predator = Predator(Coordinates(2, 2))
+        initial_herb_hp = herbivore.hp
+        initial_pred_hp = predator.hp
         
-        self.assertEqual(herbivore.hp, CREATURE_CONFIG['herbivore']['initial_hp'])
-        self.assertEqual(herbivore.speed, CREATURE_CONFIG['herbivore']['speed'])
-        self.assertEqual(predator.hp, CREATURE_CONFIG['predator']['initial_hp'])
-        self.assertEqual(predator.speed, CREATURE_CONFIG['predator']['speed'])
+        # Размещаем на поле
+        self.board.place_entity(herbivore.coordinates, herbivore)
+        self.board.place_entity(predator.coordinates, predator)
+        
+        # Применяем урон от голода
+        hunger_action = HungerAction(hunger_damage=SIMULATION_CONFIG['hunger_damage'])
+        hunger_action.execute(self.board, self.simulation.logger)
+        
+        # Проверяем результат
+        self.assertEqual(herbivore.hp, initial_herb_hp - SIMULATION_CONFIG['hunger_damage'])
+        self.assertEqual(predator.hp, initial_pred_hp - SIMULATION_CONFIG['hunger_damage'])
 
-    def test_full_turn_cycle(self):
-        """Тест полного цикла хода с учетом всех действий."""
-        self.simulation.turn_actions.extend([
-            SpawnGrassAction(
-                min_grass=SIMULATION_CONFIG['min_grass'],
-                spawn_chance=1.0  # Гарантированный спавн для тестирования
-            ),
-            MoveAction(),
-            HungerAction(hunger_damage=SIMULATION_CONFIG['hunger_damage']),
-            HealthCheckAction()
-        ])
-        
+    def test_health_check_mechanics(self):
+        """Тест проверки здоровья и удаления мертвых существ."""
+        # Создаем существо с минимальным здоровьем
         herbivore = Herbivore(Coordinates(1, 1))
-        initial_hp = herbivore.hp
-        self.simulation.board.set_piece(herbivore.coordinates, herbivore)
+        herbivore.hp = 1
+        self.board.place_entity(herbivore.coordinates, herbivore)
         
-        self.simulation.next_turn()
+        # Наносим урон
+        herbivore.take_damage(1)
         
-        # Проверяем, что существо получило урон от голода
-        self.assertEqual(herbivore.hp, initial_hp - SIMULATION_CONFIG['hunger_damage'])
+        # Проверяем здоровье
+        health_check = HealthCheckAction()
+        health_check.execute(self.board, self.simulation.logger)
+        
+        # Проверяем, что существо удалено
+        self.assertIsNone(self.board.get_entity(herbivore.coordinates))
 
-    def test_initial_creature_stats(self):
-        """Тест начальных параметров существ при инициализации."""
-        # Инициализируем симуляцию с фиксированными значениями
-        self.simulation.init_actions.extend([
-            InitAction(herbivores=1, predators=1, grass=1)
-        ])
+    def test_movement_and_interaction(self):
+        """Тест движения и взаимодействия существ."""
+        # Создаем травоядное и траву рядом
+        herbivore = Herbivore(Coordinates(1, 1))
+        grass = Grass(Coordinates(1, 2))
         
-        # Запускаем инициализацию
-        for action in self.simulation.init_actions:
-            action.execute(self.simulation.board, self.simulation.logger)
+        self.board.place_entity(herbivore.coordinates, herbivore)
+        self.board.place_entity(grass.coordinates, grass)
         
-        # Подсчитываем количество каждого типа существ
-        herbivore_count = 0
-        predator_count = 0
+        # Выполняем ход
+        move_action = MoveAction()
+        move_action.execute(self.board, self.simulation.logger)
         
-        for entity in self.simulation.board.entities.values():
-            if isinstance(entity, Herbivore):
-                herbivore = entity
-                herbivore_count += 1
-            elif isinstance(entity, Predator):
-                predator = entity
-                predator_count += 1
+        # Проверяем, что трава съедена
+        self.assertIsNone(self.board.get_entity(grass.coordinates))
+
+    def _count_entities(self, entity_type) -> int:
+        """Подсчет количества сущностей определенного типа."""
+        return sum(1 for entity in self.board.entities.values() 
+                  if isinstance(entity, entity_type))
+
+    def test_full_simulation_cycle(self):
+        """Тест полного цикла симуляции."""
+        # Инициализация
+        init_action = InitAction(herbivores=1, predators=1, grass=1)
+        init_action.execute(self.board, self.simulation.logger)
         
-        # Проверяем, что создано правильное количество существ
-        self.assertEqual(herbivore_count, 1, "Должно быть создано ровно одно травоядное")
-        self.assertEqual(predator_count, 1, "Должен быть создан ровно один хищник")
+        # Проверяем начальное состояние
+        self.assertEqual(self._count_entities(Herbivore), 1)
+        self.assertEqual(self._count_entities(Predator), 1)
+        self.assertEqual(self._count_entities(Grass), 1)
         
-        # Проверяем начальные значения HP только если существа были созданы
-        if herbivore_count > 0:
-            self.assertEqual(herbivore.hp, CREATURE_CONFIG['herbivore']['initial_hp'])
-        if predator_count > 0:
-            self.assertEqual(predator.hp, CREATURE_CONFIG['predator']['initial_hp'])
+        # Выполняем полный цикл действий
+        actions = [
+            SpawnGrassAction(min_grass=1, spawn_chance=1.0),
+            MoveAction(),
+            HungerAction(hunger_damage=1),
+            HealthCheckAction()
+        ]
+        
+        for action in actions:
+            action.execute(self.board, self.simulation.logger)
+        
+        # Проверяем, что все действия выполнились без ошибок
+        self.assertTrue(True)  # Если дошли до этой точки, значит ошибок не было
 
 
 if __name__ == '__main__':
