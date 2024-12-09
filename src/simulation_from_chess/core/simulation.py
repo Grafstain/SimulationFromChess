@@ -1,5 +1,5 @@
-from .Board import Board
-from ..renderers.BoardConsoleRenderer import BoardConsoleRenderer
+from .board import Board
+from ..renderers.board_console_renderer import BoardConsoleRenderer
 from ..config import SIMULATION_CONFIG
 from ..utils.Logger import Logger
 import time

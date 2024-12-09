@@ -1,6 +1,6 @@
-from ..core import Coordinates
-from ..entities.Creature import Creature
-from ..entities.Herbivore import Herbivore
+from ..core import coordinates
+from ..entities.creature import Creature
+from ..entities.herbivore import Herbivore
 from ..config import CREATURE_CONFIG
 
 

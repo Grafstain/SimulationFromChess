@@ -1,8 +1,8 @@
 import unittest
-from src.simulation_from_chess.core import Board
-from src.simulation_from_chess.core.Coordinates import Coordinates
-from src.simulation_from_chess.entities import Herbivore, Predator, Grass
-from src.simulation_from_chess.actions.HungerAction import HungerAction
+from src.simulation_from_chess.core import board
+from src.simulation_from_chess.core.coordinates import Coordinates
+from src.simulation_from_chess.entities import herbivore, predator, grass
+from src.simulation_from_chess.actions.hunger_action import HungerAction
 from src.simulation_from_chess.config import CREATURE_CONFIG
 
 

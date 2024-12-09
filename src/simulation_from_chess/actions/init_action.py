@@ -1,7 +1,7 @@
 from random import randint
-from ..actions.Action import Action
-from ..entities import Herbivore, Predator, Grass, Stone
-from ..core.Coordinates import Coordinates
+from ..actions.action import Action
+from ..entities import herbivore, predator, grass, stone
+from ..core.coordinates import Coordinates
 
 
 class InitAction(Action):

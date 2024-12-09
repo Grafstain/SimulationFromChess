@@ -1,5 +1,5 @@
-from ..actions.Action import Action
-from ..entities.Creature import Creature
+from ..actions.action import Action
+from ..entities.creature import Creature
 
 
 class HungerAction(Action):

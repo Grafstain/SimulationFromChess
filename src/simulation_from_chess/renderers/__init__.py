@@ -1,4 +1,3 @@
-from .BoardConsoleRenderer import BoardConsoleRenderer
-__all__ = [
-    'BoardConsoleRenderer',
-]
+from .board_console_renderer import BoardConsoleRenderer
+
+__all__ = ['board_console_renderer.py']

@@ -1,7 +1,7 @@
 from random import randint
-from ..core.Coordinates import Coordinates
-from ..entities.Grass import Grass
-from .Action import Action
+from ..core.coordinates import Coordinates
+from ..entities.grass import Grass
+from .action import Action
 
 class SpawnGrassAction(Action):
     def __init__(self, min_grass=3, spawn_chance=0.3):

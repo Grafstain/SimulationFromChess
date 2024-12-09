@@ -3,15 +3,16 @@ import unittest
 from io import StringIO
 from unittest.mock import patch
 
-from src.simulation_from_chess.actions.InitAction import InitAction
-from src.simulation_from_chess.core import Board, Simulation
-from src.simulation_from_chess.core.Coordinates import Coordinates
-from src.simulation_from_chess.entities import Herbivore, Predator, Grass
-from src.simulation_from_chess.actions import SpawnGrassAction
-from src.simulation_from_chess.actions.MoveAction import MoveAction
-from src.simulation_from_chess.actions.HealthCheckAction import HealthCheckAction
-from src.simulation_from_chess.actions.HungerAction import HungerAction
-from src.simulation_from_chess.config import CREATURE_CONFIG
+from src.simulation_from_chess.core import board, coordinates, simulation
+from src.simulation_from_chess.entities import herbivore, grass, predator
+from src.simulation_from_chess.actions import (
+    spawn_grass_action,
+    move_action,
+    health_check_action,
+    hunger_action,
+    init_action
+)
+from src.simulation_from_chess.config import SIMULATION_CONFIG, CREATURE_CONFIG
 
 
 class TestSimulation(unittest.TestCase):
@@ -39,7 +40,6 @@ class TestSimulation(unittest.TestCase):
 
     def test_next_turn_execution(self):
         """Тест выполнения одного хода."""
-        # Добавляем действие спавна травы
         self.simulation.turn_actions.append(SpawnGrassAction(min_grass=1, spawn_chance=1.0))
         
         self._capture_output()
@@ -94,7 +94,6 @@ class TestSimulation(unittest.TestCase):
     @patch('keyboard.is_pressed')
     def test_keyboard_control(self, mock_is_pressed):
         """Тест управления симуляцией с клавиатуры."""
-        # Имитируем нажатие пробела
         mock_is_pressed.side_effect = lambda key: key == 'space'
         
         self.simulation.is_running = True
@@ -108,8 +107,6 @@ class TestSimulation(unittest.TestCase):
 
     def test_config_initialization(self):
         """Тест инициализации с конфигурацией."""
-        from src.simulation_from_chess.config import SIMULATION_CONFIG
-        
         simulation = Simulation(board_size=SIMULATION_CONFIG['board_size'])
         self.assertEqual(simulation.board.width, SIMULATION_CONFIG['board_size'])
         self.assertEqual(simulation.board.height, SIMULATION_CONFIG['board_size'])
@@ -126,8 +123,6 @@ class TestSimulation(unittest.TestCase):
 
     def test_full_turn_cycle(self):
         """Тест полного цикла хода с учетом всех действий."""
-        from src.simulation_from_chess.config import SIMULATION_CONFIG
-        
         self.simulation.turn_actions.extend([
             SpawnGrassAction(
                 min_grass=SIMULATION_CONFIG['min_grass'],
@@ -155,7 +150,7 @@ class TestSimulation(unittest.TestCase):
         
         # Запускаем инициализацию
         for action in self.simulation.init_actions:
-            action.execute(self.simulation.board)
+            action.execute(self.simulation.board, self.simulation.logger)
         
         # Находим созданные существа
         herbivore = None

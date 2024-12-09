@@ -1,8 +1,8 @@
 import random
 from typing import Dict
 
-from src.simulation_from_chess.core.Coordinates import Coordinates
-from src.simulation_from_chess.entities import Entity, Herbivore, Predator, Grass, Stone
+from src.simulation_from_chess.core.coordinates import Coordinates
+from src.simulation_from_chess.entities import entity, herbivore, predator, grass, stone
 from src.simulation_from_chess.utils.Logger import Logger
 
 

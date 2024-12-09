@@ -1,6 +1,6 @@
-from ..actions.Action import Action
-from ..entities.Herbivore import Herbivore
-from ..entities.Predator import Predator
+from ..actions.action import Action
+from ..entities.herbivore import Herbivore
+from ..entities.predator import Predator
 
 
 class MoveAction(Action):

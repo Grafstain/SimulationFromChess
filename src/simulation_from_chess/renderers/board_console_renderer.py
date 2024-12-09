@@ -43,7 +43,7 @@ class BoardConsoleRenderer:
         # Выводим поле
         rendered_board = "\n".join(output)
         print(rendered_board)
-        print()  
+        print()
         
         return rendered_board
 

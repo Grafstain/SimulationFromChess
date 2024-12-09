@@ -1,9 +1,9 @@
 from src.simulation_from_chess.core import *
-from src.simulation_from_chess.actions.SpawnGrassAction import SpawnGrassAction
-from src.simulation_from_chess.actions.HealthCheckAction import HealthCheckAction
-from src.simulation_from_chess.actions.InitAction import InitAction
-from src.simulation_from_chess.actions.MoveAction import MoveAction
-from src.simulation_from_chess.actions.HungerAction import HungerAction
+from src.simulation_from_chess.actions.spawn_grass_action import SpawnGrassAction
+from src.simulation_from_chess.actions.health_check_action import HealthCheckAction
+from src.simulation_from_chess.actions.init_action import InitAction
+from src.simulation_from_chess.actions.move_action import MoveAction
+from src.simulation_from_chess.actions.hunger_action import HungerAction
 from src.simulation_from_chess.config import SIMULATION_CONFIG
 
 # Создание симуляции с настроенным размером поля

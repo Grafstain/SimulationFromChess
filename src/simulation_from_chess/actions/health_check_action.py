@@ -1,5 +1,5 @@
-from ..entities.Creature import Creature
-from .Action import Action
+from ..entities.creature import Creature
+from .action import Action
 
 class HealthCheckAction(Action):
     def execute(self, board, logger):

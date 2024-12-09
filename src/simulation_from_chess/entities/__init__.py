@@ -1,14 +1,6 @@
-from .Entity import Entity
-from .Herbivore import Herbivore
-from .Predator import Predator
-from .Grass import Grass
-from .Stone import Stone
+from .herbivore import Herbivore
+from .predator import Predator
+from .grass import Grass
+from .stone import Stone
 
-__all__ = [
-    'Entity',
-    'Creature',
-    'Grass',
-    'Herbivore',
-    'Predator',
-    'Stone'
-]
+__all__ = ['herbivore.py', 'predator.py', 'grass.py', 'stone.py']

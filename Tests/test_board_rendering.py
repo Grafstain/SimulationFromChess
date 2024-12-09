@@ -3,9 +3,9 @@ import unittest
 from io import StringIO
 
 from src.simulation_from_chess import*
-from src.simulation_from_chess.core import Board, Coordinates
-from src.simulation_from_chess.entities import Herbivore, Grass, Predator
-from src.simulation_from_chess.renderers import BoardConsoleRenderer
+from src.simulation_from_chess.core import board, coordinates
+from src.simulation_from_chess.entities import herbivore, grass, predator
+from src.simulation_from_chess.renderers import board_console_renderer
 
 
 class TestBoardRendering(unittest.TestCase):
