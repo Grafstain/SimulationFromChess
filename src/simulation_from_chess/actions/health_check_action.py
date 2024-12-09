@@ -12,4 +12,4 @@ class HealthCheckAction(Action):
                 logger.log_action(entity, "Погиб", f"на координатах ({coordinates.x}, {coordinates.y})")
                 
         for coordinates in entities_to_remove:
-            board.remove_piece(coordinates) 
+            board.remove_entity(coordinates) 

@@ -12,90 +12,57 @@ class Board:
         self.height = height
         self.entities: Dict[Coordinates, Entity] = {}
 
-    def set_piece(self, coordinates: Coordinates, entity: Entity):
-        """Установка существа на поле с проверкой границ."""
-        if not self.is_valid_coordinates(coordinates) or not self.is_square_empty(coordinates):
+    def place_entity(self, coordinates: Coordinates, entity: Entity):
+        """Размещение сущности на поле с проверкой границ."""
+        if not self.is_within_bounds(coordinates) or not self.is_position_vacant(coordinates):
             return False
         entity.coordinates = coordinates
         self.entities[coordinates] = entity
         return True
 
-    def remove_piece(self, coordinates: Coordinates):
+    def remove_entity(self, coordinates: Coordinates):
+        """Удаление сущности с поля."""
         if coordinates in self.entities:
             del self.entities[coordinates]
 
-    def is_square_empty(self, coordinates: Coordinates) -> bool:
-        """Проверка пустой ли квадрат."""
-        if not self.is_valid_coordinates(coordinates):
+    def is_position_vacant(self, coordinates: Coordinates) -> bool:
+        """Проверка свободна ли позиция."""
+        if not self.is_within_bounds(coordinates):
             return False
         return coordinates not in self.entities
 
-    def get_piece(self, coordinates: Coordinates) -> Entity:
-        """Получение существа с проверкой валидности координат."""
-        if not self.is_valid_coordinates(coordinates):
+    def get_entity(self, coordinates: Coordinates) -> Entity:
+        """Получение сущности с проверкой валидности координат."""
+        if not self.is_within_bounds(coordinates):
             return None
         return self.entities.get(coordinates)
 
-    def setup_fixed_positions(self):
-        """Устанавливает начальные позиции существ."""
-        all_coordinates = [
-            Coordinates(x, y)
-            for x in range(1, self.width + 1)
-            for y in range(1, self.height + 1)
-        ]
-        random.shuffle(all_coordinates)
-        # ... остальной код метода без изменений ...
+    def move_entity(self, old_coords: Coordinates, new_coords: Coordinates) -> bool:
+        """
+        Перемещение сущности с одной позиции на другую.
+        
+        Args:
+            old_coords (Coordinates): Текущие координаты
+            new_coords (Coordinates): Новые координаты
+        Returns:
+            bool: True если перемещение успешно, False если нет
+        """
+        if not self.is_within_bounds(old_coords) or not self.is_within_bounds(new_coords):
+            return False
+            
+        entity = self.entities.get(old_coords)
+        if entity is None:
+            return False
+            
+        # Удаляем сущность со старой позиции
+        del self.entities[old_coords]
+        
+        # Помещаем сущность на новую позицию
+        self.entities[new_coords] = entity
+        
+        return True
 
-    def setup_random_positions(self):
-        herbivores_count = 5
-        predators_count = 3
-        grass_count = 4
-        stone_count = 2
-
-        all_coordinates = [Coordinates(x, y) for x in range(self.width) for y in range(self.height)]
-        random.shuffle(all_coordinates)  # Перемешиваем координаты для случайного выбора
-
-        # Установка травоядных
-        placed_herbivores = 0
-        for coord in all_coordinates:
-            if placed_herbivores <= herbivores_count and self.is_square_empty(coord):
-                herbivore = Herbivore(coord)
-                self.set_piece(coord, herbivore)
-                placed_herbivores += 1
-                all_coordinates.remove(coord)
-
-        # Установка хищников
-        placed_predator = 0
-        for coord in all_coordinates:
-            if placed_predator <= predators_count and self.is_square_empty(coord):
-                predator = Predator(coord)
-                self.set_piece(coord, predator)
-                placed_predator += 1
-                all_coordinates.remove(coord)
-
-        # Установка травы
-        placed_grass = 0
-        for coord in all_coordinates:
-            if placed_grass <= grass_count and self.is_square_empty(coord):
-                grass = Grass(coord)
-                self.set_piece(coord, grass)
-                placed_grass += 1
-                all_coordinates.remove(coord)
-
-        # Установка камней
-        placed_stone = 0
-        for coord in all_coordinates:
-            if placed_stone <= stone_count and self.is_square_empty(coord):
-                stone = Stone(coord)
-                self.set_piece(coord, stone)
-                placed_stone += 1
-                all_coordinates.remove(coord)
-
-    @staticmethod
-    def is_square_dark(coordinates: Coordinates) -> bool:
-        return (coordinates.x + coordinates.y) % 2 == 0
-
-    def is_valid_coordinates(self, coordinates: Coordinates) -> bool:
-        """Проверка валидности координат."""
+    def is_within_bounds(self, coordinates: Coordinates) -> bool:
+        """Проверка находятся ли координаты в пределах поля."""
         return (1 <= coordinates.x <= self.width and 
                 1 <= coordinates.y <= self.height)

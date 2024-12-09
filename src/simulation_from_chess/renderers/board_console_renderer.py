@@ -13,7 +13,7 @@ class BoardConsoleRenderer:
     def get_background_color(self, coordinates: Coordinates) -> str:
         """Возвращает цвет фона для клетки."""
         return (self.ANSI_BLACK_SQUARE_BACKGROUND 
-                if Board.is_square_dark(coordinates) 
+                if self.is_square_dark(coordinates)
                 else self.ANSI_WHITE_SQUARE_BACKGROUND)
 
     def get_entity_symbol(self, entity) -> str:
@@ -30,7 +30,7 @@ class BoardConsoleRenderer:
             row = f"{y:2d} "
             for x in range(1, board.width + 1):
                 coord = Coordinates(x, y)
-                entity = board.get_piece(coord)
+                entity = board.get_entity(coord)
                 bg_color = self.get_background_color(coord)
                 cell = f"{bg_color}{self.get_entity_symbol(entity)}{self.ANSI_RESET}"
                 row += cell
