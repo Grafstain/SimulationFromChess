@@ -1,21 +1,14 @@
 from ..actions.action import Action
 from ..entities.creature import Creature
-from ..core.board import Board
-from ..utils.logger import Logger
 
 
 class HungerAction(Action):
-    def __init__(self, hunger_damage: int):
+    def __init__(self, hunger_damage=1):
         self.hunger_damage = hunger_damage
 
-    def execute(self, board: Board, logger: Logger) -> None:
-        """
-        Применяет урон от голода ко всем существам.
-        
-        Args:
-            board: Игровое поле
-            logger: Логгер (не используется для голода)
-        """
+    def execute(self, board, logger):
+        """Наносит урон от голода всем существам на поле."""
         for entity in board.entities.values():
             if isinstance(entity, Creature):
                 entity.take_damage(self.hunger_damage)
+                logger.log_action(entity, "Голод", f"-{self.hunger_damage} HP")
