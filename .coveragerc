@@ -1,0 +1,19 @@
+[run]
+source = src.simulation_from_chess
+branch = True
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__.:
+    raise NotImplementedError
+    pass
+    raise ImportError
+    except ImportError:
+    def main() 
+
+[paths]
+source =
+    src/simulation_from_chess
+    */site-packages/simulation_from_chess 
