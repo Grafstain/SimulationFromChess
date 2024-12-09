@@ -131,6 +131,137 @@ class TestSimulation(unittest.TestCase):
         # Проверяем, что все действия выполнились без ошибок
         self.assertTrue(True)  # Если дошли до этой точки, значит ошибок не было
 
+    def test_simulation_initialization(self):
+        """Тест инициализации симуляции."""
+        # Тест с параметрами по умолчанию
+        default_sim = Simulation()
+        self.assertEqual(default_sim.board.width, SIMULATION_CONFIG['board_size'])
+        self.assertEqual(default_sim.board.height, SIMULATION_CONFIG['board_size'])
+        self.assertIsNotNone(default_sim.logger)
+        self.assertEqual(default_sim.turn_delay, SIMULATION_CONFIG['turn_delay'])
+        self.assertFalse(default_sim.is_running)
+        self.assertFalse(default_sim.is_paused)
+        
+        # Тест с кастомными параметрами
+        custom_size = 10
+        custom_sim = Simulation(board_size=custom_size)
+        self.assertEqual(custom_sim.board.width, custom_size)
+        self.assertEqual(custom_sim.board.height, custom_size)
+        
+        # Тест валидации параметров
+        invalid_sizes = [0, -5]
+        for invalid_size in invalid_sizes:
+            with self.assertRaises(
+                ValueError,
+                msg=f"Должно вызывать ValueError для размера поля {invalid_size}"
+            ):
+                Simulation(board_size=invalid_size)
+
+    def test_simulation_step(self):
+        """Тест выполнения одного шага симуляции."""
+        # Подготовка начального состояния
+        init_action = InitAction(herbivores=2, predators=1, grass=3)
+        init_action.execute(self.board, self.simulation.logger)
+        
+        # Добавляем действия в симуляцию
+        self.simulation.turn_actions.extend([
+            SpawnGrassAction(min_grass=1, spawn_chance=1.0),  # Гарантированный спавн травы
+            MoveAction(),
+            HungerAction(hunger_damage=1),
+            HealthCheckAction()
+        ])
+        
+        initial_state = {
+            'herbivores': self._count_entities(Herbivore),
+            'predators': self._count_entities(Predator),
+            'grass': self._count_entities(Grass)
+        }
+        
+        # Выполняем один шаг симуляции
+        with patch('sys.stdout', new=StringIO()):  # Подавляем вывод
+            self.simulation.next_turn()
+        
+        # Проверяем, что состояние изменилось
+        final_state = {
+            'herbivores': self._count_entities(Herbivore),
+            'predators': self._count_entities(Predator),
+            'grass': self._count_entities(Grass)
+        }
+        
+        # Проверяем изменение счетчика ходов
+        self.assertEqual(self.simulation.move_counter, 1)
+        
+        # Проверяем, что состояние изменилось хотя бы по одному параметру
+        self.assertNotEqual(
+            initial_state,
+            final_state,
+            "Шаг симуляции должен изменить состояние"
+        )
+        
+        # Проверяем, что хотя бы одно из изменений произошло
+        changes = [
+            final_state['herbivores'] != initial_state['herbivores'],
+            final_state['predators'] != initial_state['predators'],
+            final_state['grass'] != initial_state['grass']
+        ]
+        self.assertTrue(
+            any(changes),
+            "Должно измениться количество хотя бы одного типа сущностей"
+        )
+
+    def test_simulation_run(self):
+        """Тест запуска симуляции на несколько шагов."""
+        # Подготовка начального состояния
+        init_action = InitAction(herbivores=2, predators=1, grass=3)
+        init_action.execute(self.board, self.simulation.logger)
+        
+        initial_state = {
+            'herbivores': self._count_entities(Herbivore),
+            'predators': self._count_entities(Predator),
+            'grass': self._count_entities(Grass)
+        }
+        
+        # Добавляем действия в симуляцию
+        self.simulation.turn_actions.extend([
+            SpawnGrassAction(min_grass=1, spawn_chance=1.0),
+            MoveAction(),
+            HungerAction(hunger_damage=1),
+            HealthCheckAction()
+        ])
+        
+        # Запускаем симуляцию на несколько шагов
+        steps = 3
+        with patch('sys.stdout', new=StringIO()), \
+             patch('time.sleep'), \
+             patch('keyboard.is_pressed', return_value=False):  # Симулируем отсутствие нажатий клавиш
+            self.simulation.run(steps)
+        
+        # Проверяем финальное состояние
+        final_state = {
+            'herbivores': self._count_entities(Herbivore),
+            'predators': self._count_entities(Predator),
+            'grass': self._count_entities(Grass)
+        }
+        
+        # Проверяем, что симуляция выполнилась и состояние изменилось
+        self.assertNotEqual(
+            initial_state, 
+            final_state,
+            f"Состояние должно измениться после {steps} шагов"
+        )
+        
+        # Проверяем количество выполненных шагов
+        self.assertEqual(self.simulation.move_counter, steps)
+        
+        # Проверяем остановку при нулевом количестве шагов
+        with patch('sys.stdout', new=StringIO()):
+            self.simulation.run(0)
+            self.assertEqual(
+                self.simulation.move_counter, 
+                steps,
+                "Счетчик ходов не должен измениться при steps=0"
+            )
+
 
 if __name__ == '__main__':
     unittest.main()
