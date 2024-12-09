@@ -2,6 +2,7 @@ from .board import Board
 from ..renderers.board_console_renderer import BoardConsoleRenderer
 from ..config import SIMULATION_CONFIG
 from ..utils.logger import Logger
+from ..entities.creature import Creature
 import time
 import keyboard
 
@@ -31,9 +32,16 @@ class Simulation:
         self.turn_delay = SIMULATION_CONFIG['turn_delay']
 
     def next_turn(self):
-        """Просимулироват�� и отрендерить один ход."""
+        """Просимулировать и отрендерить один ход."""
         print(f"\nХод {self.move_counter + 1}")
         self.logger.actions_log.clear()
+
+        # Проверяем наличие существ
+        creatures = self.board.get_entities_by_type(Creature)
+        if not creatures:
+            print("\nСимуляция завершена: все существа погибли")
+            self.stop_simulation()
+            return False  # Возвращаем False, если ход не выполнен
 
         for action in self.turn_actions:
             action.execute(self.board, self.logger)
@@ -41,6 +49,7 @@ class Simulation:
         self.renderer.render(self.board)
         self.logger.log_creatures_state(self.board.entities)
         self.move_counter += 1
+        return True  # Возвращаем True, если ход выполнен успешно
 
     def start(self):
         """Запустить бесконечный цикл симуляции и рендеринга."""
@@ -77,12 +86,7 @@ class Simulation:
         print("\nСимуляция остановлена.")
 
     def run(self, steps: int):
-        """
-        Запустить симуляцию на заданное количество шагов.
-        
-        Args:
-            steps: Количество шагов симуляции
-        """
+        """Запустить симуляцию на заданное количество шагов."""
         if steps <= 0:
             return
         
@@ -105,6 +109,7 @@ class Simulation:
                 break
 
             if not self.is_paused:
-                self.next_turn()
+                if not self.next_turn():  # Проверяем результат выполнения хода
+                    break  # Прерываем цикл, если ход не выполнен
                 steps_completed += 1
                 time.sleep(self.turn_delay)
