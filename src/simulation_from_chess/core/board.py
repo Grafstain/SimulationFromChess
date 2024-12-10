@@ -1,9 +1,10 @@
 import random
-from typing import Dict, List
+from typing import Dict, List, Optional, Type
 
 from ..core.coordinates import Coordinates
 from ..entities import *
 from src.simulation_from_chess.utils.logger import Logger
+from src.simulation_from_chess.core.game_state import GameState
 
 
 class Board:
@@ -24,38 +25,53 @@ class Board:
         self.width = width
         self.height = height
         self.entities = {}
+        self.game_state = GameState()
 
     def is_valid_coordinates(self, coordinates: Coordinates) -> bool:
         """Проверка валидности координат."""
         return (1 <= coordinates.x <= self.width and 
                 1 <= coordinates.y <= self.height)
 
-    def place_entity(self, coordinates: Coordinates, entity) -> None:
+    def place_entity(self, coordinates: Coordinates, entity: Entity) -> None:
         """
-        Размещение сущности на доске.
+        Размещает сущность на доске.
         
+        Args:
+            coordinates: Координаты для размещения
+            entity: Размещаемая сущность
+            
         Raises:
-            ValueError: Если координаты невалидны или позиция занята
+            ValueError: Если клетка уже занята или координаты вне поля
         """
-        if not self.is_valid_coordinates(coordinates):
-            raise ValueError(f"Невалидные координаты: {coordinates}")
-            
-        if not self.is_position_vacant(coordinates):
-            raise ValueError(f"Позиция {coordinates} уже занята")
-            
+        if coordinates in self.entities:
+            raise ValueError(f"Клетка {coordinates} уже занята")
+        
+        if not (1 <= coordinates.x <= self.width and 1 <= coordinates.y <= self.height):
+            raise ValueError(f"Координаты {coordinates} находятся вне поля")
+        
         self.entities[coordinates] = entity
+        entity.coordinates = coordinates
 
-    def remove_entity(self, coordinates: Coordinates) -> bool:
+    def remove_entity(self, coordinates: Coordinates) -> None:
         """
-        Удаление сущности с доски.
+        Удалить сущность с указанных координат.
+        
+        Args:
+            coordinates: Координаты для удаления
+        """
+        if coordinates in self.entities:
+            del self.entities[coordinates]
+
+    def get_entity(self, coordinates: Coordinates) -> Optional[Entity]:
+        """
+        Получить сущность по координатам.
+        
+        Args:
+            coordinates: Координаты для поиска
         
         Returns:
-            bool: True если сущность была удалена, False если её не было
+            Optional[Entity]: Сущность, если она есть на указанных координатах, иначе None
         """
-        return self.entities.pop(coordinates, None) is not None
-
-    def get_entity(self, coordinates: Coordinates):
-        """Получение сущности по координатам."""
         return self.entities.get(coordinates)
 
     def is_position_vacant(self, coordinates: Coordinates) -> bool:
@@ -76,43 +92,51 @@ class Board:
                     
         return adjacent
 
-    def get_entities_by_type(self, entity_type) -> List:
-        """Получение списка сущностей определенного типа."""
-        return [entity for entity in self.entities.values() 
-                if isinstance(entity, entity_type)]
+    def get_entities_by_type(self, entity_type: Type) -> List[Entity]:
+        """
+        Получить список всех сущностей указанного типа.
+        
+        Args:
+            entity_type: Тип искомых сущностей
+        
+        Returns:
+            List[Entity]: Список сущностей указанного типа
+        """
+        return [
+            entity for entity in self.entities.values() 
+            if isinstance(entity, entity_type)
+        ]
 
     def clear(self) -> None:
         """Очистка доски."""
         self.entities.clear()
 
-    def move_entity(self, from_coords: Coordinates, to_coords: Coordinates) -> bool:
+    def move_entity(self, entity: Entity, new_coordinates: Coordinates) -> None:
         """
-        Перемещение сущности с одной позиции на другую.
+        Перемещает сущность на новые координаты.
         
         Args:
-            from_coords: Исходные координаты
-            to_coords: Целевые координаты
-            
-        Returns:
-            bool: True если перемещение успешно, False если нет
-            
+            entity: Перемещаемая сущность
+            new_coordinates: Новые координаты
+        
         Raises:
-            ValueError: Если координаты невалидны или целевая позиция занята
+            ValueError: Если новые координаты заняты или находятся вне поля
         """
-        if not self.is_valid_coordinates(to_coords):
-            raise ValueError(f"Невалидные целевые координаты: {to_coords}")
-            
-        if not self.is_position_vacant(to_coords):
-            raise ValueError(f"Целевая позиция {to_coords} уже занята")
-            
-        entity = self.get_entity(from_coords)
-        if entity is None:
-            return False
-            
-        self.remove_entity(from_coords)
-        self.place_entity(to_coords, entity)
-        entity.coordinates = to_coords
-        return True
+        if new_coordinates in self.entities:
+            raise ValueError(f"Клетка {new_coordinates} уже занята")
+        
+        if not (1 <= new_coordinates.x <= self.width and 
+                1 <= new_coordinates.y <= self.height):
+            raise ValueError(f"Координаты {new_coordinates} находятся вне поля")
+        
+        # Удаляем сущность со старых координат
+        old_coordinates = entity.coordinates
+        if old_coordinates in self.entities:
+            del self.entities[old_coordinates]
+        
+        # Размещаем на новых координатах
+        self.entities[new_coordinates] = entity
+        entity.coordinates = new_coordinates
 
     def get_vacant_adjacent_positions(self, coordinates: Coordinates) -> List[Coordinates]:
         """Получение списка свободных соседних позиций."""
@@ -143,4 +167,51 @@ class Board:
 
     def _calculate_distance(self, coords1: Coordinates, coords2: Coordinates) -> int:
         """Вычисление манхэттенского расстояния между координатами."""
+        return abs(coords1.x - coords2.x) + abs(coords1.y - coords2.y)
+
+    def next_turn(self) -> None:
+        """Переход к следующему ходу."""
+        self.game_state.current_turn += 1
+        # Сохраняем состояние всех сущностей
+        for entity in self.entities.values():
+            self.game_state.save_entity_state(
+                self.game_state.current_turn,
+                entity.entity_id,
+                entity.get_state()
+            )
+
+    def update_entity_state(self, entity: Entity) -> None:
+        """Обновление состояния сущности."""
+        self.game_state.save_entity_state(
+            self.game_state.current_turn,
+            entity.entity_id,
+            entity.get_state()
+        )
+
+    def get_empty_cells(self) -> List[Coordinates]:
+        """
+        Получить список пустых клеток на доске.
+        
+        Returns:
+            List[Coordinates]: Список координат пустых клеток
+        """
+        empty_cells = []
+        for x in range(1, self.width + 1):
+            for y in range(1, self.height + 1):
+                coords = Coordinates(x, y)
+                if coords not in self.entities:
+                    empty_cells.append(coords)
+        return empty_cells
+
+    def manhattan_distance(self, coords1: Coordinates, coords2: Coordinates) -> int:
+        """
+        Вычисляет манхэттенское расстояние между двумя точками.
+        
+        Args:
+            coords1: Первая точка
+            coords2: Вторая точка
+            
+        Returns:
+            int: Манхэттенское расстояние
+        """
         return abs(coords1.x - coords2.x) + abs(coords1.y - coords2.y)
