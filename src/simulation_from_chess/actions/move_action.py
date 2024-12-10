@@ -15,7 +15,7 @@ class MoveAction(Action):
             board: Игровая доска
             logger: Логгер для записи действий
         """
-        # Создаем копию списка существ, чтобы избежать проблем с изменением словаря во время итерации
+        # Создаем копию списка существ
         entities = [
             entity for entity in board.entities.values()
             if isinstance(entity, (Herbivore, Predator))
@@ -35,26 +35,23 @@ class MoveAction(Action):
         """
         move_result = creature.make_move(board)
         
-        # Если перемещение вернуло булево значение (старая версия)
-        if isinstance(move_result, bool):
+        # Если результат пустой или не является списком/кортежем, пропускаем
+        if not move_result or not isinstance(move_result, (list, tuple)):
             return
-            
-        # Если перемещение вернуло список действий
-        if isinstance(move_result, (list, tuple)):
-            self._log_actions(creature, move_result, logger)
-            
-    def _log_actions(self, creature: Creature, actions: List[Tuple[str, str]], logger) -> None:
-        """
-        Логирование действий существа.
         
-        Args:
-            creature: Существо, совершившее действия
-            actions: Список действий для логирования
-            logger: Логгер для записи действий
-        """
-        for action in actions:
-            if isinstance(action, tuple) and len(action) == 2:
-                logger.log_action(creature, action[0], action[1])
+        # Если результат - список действий
+        if isinstance(move_result[0], tuple):
+            for action in move_result:
+                if len(action) == 4:  # Действие с информацией о смерти
+                    action_type, details, target, killer = action
+                    logger.log_action(target, action_type, details, killer=killer)
+                elif len(action) == 2:  # Обычное действие
+                    logger.log_action(creature, action[0], action[1])
+        # Если результат - одиночное действие в формате (success, action)
+        elif len(move_result) == 2 and isinstance(move_result[1], str):
+            success, action = move_result
+            if success:
+                logger.log_action(creature, "Действие", action)
 
     def __repr__(self) -> str:
         return "MoveAction()"
