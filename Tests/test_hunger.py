@@ -125,6 +125,9 @@ class TestHunger(unittest.TestCase):
             (herbivore, herbivore.coordinates)
         ])
         
+        # Устанавливаем гарантированный успех атаки
+        predator.set_hunt_result(True)
+        
         # Проверяем атаку хищника
         success, _ = predator.interact_with_target(self.board, herbivore)
         
@@ -167,4 +170,79 @@ class TestHunger(unittest.TestCase):
             herbivore.hp,
             CREATURE_CONFIG['herbivore']['initial_hp'],
             "HP не должно превышать максимальное значение"
+        )
+
+    def test_successful_hunt(self) -> None:
+        """Тест успешной охоты хищника."""
+        predator = Predator(Coordinates(1, 1))
+        herbivore = Herbivore(Coordinates(1, 2))
+        initial_herbivore_hp = herbivore.hp
+        
+        # Устанавливаем гарантированный успех охоты
+        predator.set_hunt_result(True)
+        
+        self._setup_entities([
+            (predator, predator.coordinates),
+            (herbivore, herbivore.coordinates)
+        ])
+        
+        success, message = predator.interact_with_target(self.board, herbivore)
+        
+        self.assertTrue(success, "Охота должна быть успешной")
+        self.assertEqual(
+            herbivore.hp,
+            initial_herbivore_hp - CREATURE_CONFIG['predator']['attack_damage'],
+            "Неверный урон от атаки хищника"
+        )
+        self.assertIn("Успешная атака", message, "Неверное сообщение об успешной атаке")
+
+    def test_failed_hunt(self) -> None:
+        """Тест неудачной охоты хищника."""
+        predator = Predator(Coordinates(1, 1))
+        herbivore = Herbivore(Coordinates(1, 2))
+        initial_herbivore_hp = herbivore.hp
+        
+        # Устанавливаем гарантированный провал охоты
+        predator.set_hunt_result(False)
+        
+        self._setup_entities([
+            (predator, predator.coordinates),
+            (herbivore, herbivore.coordinates)
+        ])
+        
+        success, message = predator.interact_with_target(self.board, herbivore)
+        
+        self.assertFalse(success, "Охота должна быть неудачной")
+        self.assertEqual(
+            herbivore.hp,
+            initial_herbivore_hp,
+            "HP травоядного не должно измениться при неудачной охоте"
+        )
+        self.assertIn("избежало атаки", message, "Неверное сообщение о неудачной атаке")
+
+    def test_hunt_with_random_chance(self) -> None:
+        """Тест случайности успеха охоты."""
+        predator = Predator(Coordinates(1, 1))
+        herbivore = Herbivore(Coordinates(1, 2))
+        
+        # Не устанавливаем принудительный результат
+        successes = []
+        for _ in range(100):  # Достаточно большое количество попыток
+            success = predator.try_attack_herbivore(herbivore)
+            successes.append(success)
+        
+        # Проверяем, что есть как успешные, так и неудачные попытки
+        self.assertTrue(
+            any(successes) and not all(successes),
+            "Охота должна быть как успешной, так и неудачной при случайных попытках"
+        )
+        
+        # Проверяем, что процент успешных охот примерно соответствует ожидаемому
+        success_rate = sum(successes) / len(successes)
+        expected_rate = 1 - CREATURE_CONFIG['predator']['escape_chance']
+        self.assertAlmostEqual(
+            success_rate,
+            expected_rate,
+            delta=0.2,  # Допускаем отклонение в 20%
+            msg="Процент успешных охот значительно отличается от ожидаемого"
         )
