@@ -1,4 +1,5 @@
 from .board import Board
+from ..actions.init_action import InitAction
 from ..renderers.board_console_renderer import BoardConsoleRenderer
 from ..config import SIMULATION_CONFIG
 from ..utils.logger import Logger
@@ -36,12 +37,16 @@ class Simulation:
         print(f"\nХод {self.move_counter + 1}")
         self.logger.actions_log.clear()
 
+        # Если симуляция на паузе, не выполняем ход
+        if self.is_paused:
+            return False
+
         # Проверяем наличие существ
         creatures = self.board.get_entities_by_type(Creature)
         if not creatures:
             print("\nСимуляция завершена: все существа погибли")
             self.stop_simulation()
-            return False  # Возвращаем False, если ход не выполнен
+            return False
 
         for action in self.turn_actions:
             action.execute(self.board, self.logger)
@@ -49,10 +54,16 @@ class Simulation:
         self.renderer.render(self.board)
         self.logger.log_creatures_state(self.board.entities)
         self.move_counter += 1
-        return True  # Возвращаем True, если ход выполнен успешно
+        return True
 
-    def start(self):
-        """Запустить бесконечный цикл симуляции и рендеринга."""
+    def start(self, run_loop=True):
+        """
+        Запустить симуляцию.
+        
+        Args:
+            run_loop: Если True, запускает бесконечный цикл симуляции (по умолчанию)
+                     Если False, только инициализирует симуляцию (для тестирования)
+        """
         print("Начало симуляции")
         print("Управление: ПРОБЕЛ - пауза/продолжить, q - остановить симуляцию")
 
@@ -60,17 +71,19 @@ class Simulation:
             action.execute(self.board, self.logger)
 
         self.is_running = True
-        while self.is_running:
-            if keyboard.is_pressed('space'):
-                self.toggle_pause()
-                time.sleep(0.1)
-            elif keyboard.is_pressed('q'):
-                self.stop_simulation()
-                break
 
-            if not self.is_paused:
-                self.next_turn()
-                time.sleep(self.turn_delay)
+        if run_loop:
+            while self.is_running:
+                if keyboard.is_pressed('space'):
+                    self.toggle_pause()
+                    time.sleep(0.1)
+                elif keyboard.is_pressed('q'):
+                    self.stop_simulation()
+                    break
+
+                if not self.is_paused:
+                    self.next_turn()
+                    time.sleep(self.turn_delay)
 
     def toggle_pause(self):
         """Переключить состояние паузы."""
@@ -113,3 +126,19 @@ class Simulation:
                     break  # Прерываем цикл, если ход не выполнен
                 steps_completed += 1
                 time.sleep(self.turn_delay)
+
+    def initialize(self, herbivores: int = 0, predators: int = 0, grass: int = 0) -> None:
+        """
+        Инициализация начального состояния симуляции.
+        
+        Args:
+            herbivores: Количество травоядных
+            predators: Количество хищников
+            grass: Количество травы
+        """
+        init_action = InitAction(
+            herbivores=herbivores,
+            predators=predators,
+            grass=grass
+        )
+        init_action.execute(self.board, self.logger)
