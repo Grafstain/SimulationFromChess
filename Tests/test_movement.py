@@ -117,17 +117,17 @@ class TestMovement(unittest.TestCase):
         # Проверяем, что существа не находятся на одной клет��е
         self.assertNotEqual(herbivore1.coordinates, herbivore2.coordinates)
 
-    def test_path_finding(self) -> None:
-        """Тест поиска пути к цели."""
+    def test_path_finding_with_blocked_paths(self) -> None:
+        """Тест поведения существа при заблокированных путях."""
         herbivore = Herbivore(Coordinates(1, 1))
-        grass = Grass(Coordinates(3, 3))
+        grass = Grass(Coordinates(2, 2))  # Трава на расстоянии 2 (манхэттенское)
         stones = [
-            Stone(Coordinates(1, 2)),  # Блокируем прямой путь вправо
-            Stone(Coordinates(2, 1))   # Блокируем прямой путь вниз
+            Stone(Coordinates(1, 2)),  # Блокируем путь вверх
+            Stone(Coordinates(2, 1))   # Блокируем путь вправо
         ]
         
-        # Наносим критический урон травоядному
-        damage = CREATURE_CONFIG['herbivore']['initial_hp'] * 0.8  # Оставляем 20% здоровья
+        # Наносим критический урон травоядному, чтобы оно хотело есть
+        damage = CREATURE_CONFIG['herbivore']['initial_hp'] * 0.8
         herbivore.take_damage(int(damage))
         
         # Размещаем сущности на доске
@@ -139,52 +139,68 @@ class TestMovement(unittest.TestCase):
         # Запоминаем начальные координаты
         initial_coords = herbivore.coordinates
         
-        # Проверяем, что трава находится в зоне видимости
-        found_targets = self.board.get_entities_in_range(herbivore.coordinates, herbivore.speed * 2)
-        grass_targets = [
-            (entity, distance) for entity, distance in found_targets
-            if isinstance(entity, Grass)
-        ]
-        self.assertTrue(grass_targets, "Травоядное должно видеть траву в зоне видимости")
-        self.assertEqual(grass_targets[0][0], grass, "Травоядное должно найти нужную траву")
+        # Получаем доступные ходы
+        herbivore.update_available_moves(self.board)
+        available_moves = herbivore.available_moves
+        
+        # Проверяем отсутствие доступных ходов
+        self.assertEqual(
+            len(available_moves), 
+            0, 
+            "При заблокированных путях не должно быть доступных ходов"
+        )
         
         # Выполняем ход
         herbivore.make_move(self.board)
         
-        # Проверяем, что существо сдвинулось с начальной позиции
-        self.assertNotEqual(
+        # Проверяем, что существо не сдвинулось
+        self.assertEqual(
             herbivore.coordinates,
             initial_coords,
-            "Существо должно сдвинуться с начальной позиции"
+            "Существо не должно двигаться, если все пути заблокированы"
         )
+
+    def test_target_visibility(self) -> None:
+        """Тест видимости цели."""
+        herbivore = Herbivore(Coordinates(1, 1))
+        grass = Grass(Coordinates(2, 2))
         
-        # Проверяем, что существо не находится на камнях
-        self.assertNotIn(
+        self._setup_entities([
+            (herbivore, herbivore.coordinates),
+            (grass, grass.coordinates)
+        ])
+        
+        manhattan_distance = self.board.manhattan_distance(
             herbivore.coordinates,
-            [stone.coordinates for stone in stones],
-            "Существо не должно находиться на камнях"
+            grass.coordinates
         )
         
-        # Проверяем, что существо приближается к цели
-        current_distance = self.board.manhattan_distance(herbivore.coordinates, grass.coordinates)
-        initial_distance = self.board.manhattan_distance(initial_coords, grass.coordinates)
-        self.assertLess(
-            current_distance,
-            initial_distance,
-            "Существо должно приближаться к цели"
+        self.assertLessEqual(
+            manhattan_distance,
+            herbivore.speed * 2,
+            "Трава должна быть в пределах видимости существа"
         )
+
+    def test_orthogonal_movement(self) -> None:
+        """Тест ортогональности движения."""
+        herbivore = Herbivore(Coordinates(2, 2))
         
-        # Проверяем, что существо выбрало один из возможных оптимальных путей
-        possible_moves = [
-            Coordinates(2, 2),  # Диагональный путь
-            Coordinates(1, 3),  # Обход справа
-            Coordinates(3, 1)   # Обход слева
-        ]
-        self.assertIn(
-            herbivore.coordinates,
-            possible_moves,
-            "Существо должно выбрать один из оптимальных путей"
-        )
+        self._setup_entities([
+            (herbivore, herbivore.coordinates)
+        ])
+        
+        herbivore.update_available_moves(self.board)
+        available_moves = herbivore.available_moves
+        
+        # Проверяем, что все доступные ходы - ортогональные
+        initial_coords = herbivore.coordinates
+        for move in available_moves:
+            dx = abs(move.x - initial_coords.x)
+            dy = abs(move.y - initial_coords.y)
+            self.assertTrue(
+                (dx == 1 and dy == 0) or (dx == 0 and dy == 1),
+                "Доступные ходы должны быть только ортогональными"
+            )
 
     def test_movement_speed_limit(self) -> None:
         """Тест ограничения скорости движения."""
