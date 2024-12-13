@@ -1,56 +1,135 @@
 import random
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Tuple
 
 from ..core.coordinates import Coordinates
 from ..entities import *
 from src.simulation_from_chess.utils.logger import Logger
 from src.simulation_from_chess.core.game_state import GameState
+from src.simulation_from_chess.core.board_state import BoardState
+from src.simulation_from_chess.core.path_finder import PathFinder
 
-
+#TODO: need rework
 class Board:
     def __init__(self, width: int, height: int):
         """
         Инициализация игровой доски.
         
         Args:
-            width: Ширина доски
-            height: Высота доски
+            width: Ширина поля
+            height: Высота поля
             
         Raises:
-            ValueError: Если размеры доски невалидны
+            ValueError: Если размеры поля невалидны
         """
         if width <= 0 or height <= 0:
-            raise ValueError(f"Размеры доски должны быть положительными числами, получено: width={width}, height={height}")
+            raise ValueError(f"Размеры поля должны быть положительными числами, получено: {width}x{height}")
             
         self.width = width
         self.height = height
-        self.entities = {}
-        self.game_state = GameState()
+        self.entities: Dict[Coordinates, Entity] = {}
+        self.game_state = BoardState()
+        self.path_finder = PathFinder(self)
+        self._entity_cache: Dict[Type[Entity], List[Entity]] = {}
 
     def is_valid_coordinates(self, coordinates: Coordinates) -> bool:
         """Проверка валидности координат."""
         return (1 <= coordinates.x <= self.width and 
                 1 <= coordinates.y <= self.height)
-
-    def place_entity(self, coordinates: Coordinates, entity: Entity) -> None:
+                
+    def place_entity(self, coordinates: Coordinates, entity: Entity) -> bool:
         """
-        Размещает сущность на доске.
+        Размещение сущности на доске.
         
         Args:
             coordinates: Координаты для размещения
             entity: Размещаемая сущность
             
-        Raises:
-            ValueError: Если клетка уже занята или координаты вне поля
+        Returns:
+            bool: True если размещение успешно, False если позиция занята
         """
-        if coordinates in self.entities:
-            raise ValueError(f"Клетка {coordinates} уже занята")
-        
-        if not (1 <= coordinates.x <= self.width and 1 <= coordinates.y <= self.height):
-            raise ValueError(f"Координаты {coordinates} находятся вне поля")
-        
+        if not self.is_valid_coordinates(coordinates) or coordinates in self.entities:
+            return False
+            
         self.entities[coordinates] = entity
         entity.coordinates = coordinates
+        self._invalidate_cache()
+        return True
+        
+    def move_entity(self, old_coordinates: Coordinates, new_coordinates: Coordinates) -> bool:
+        """
+        Перемещение сущности с одних координат на другие.
+        
+        Args:
+            old_coordinates: Текущие координаты сущности
+            new_coordinates: Новые координаты для перемещения
+            
+        Returns:
+            bool: True если перемещение успешно, False если нет
+        """
+        if not self.is_valid_coordinates(new_coordinates):
+            return False
+            
+        if old_coordinates not in self.entities:
+            return False
+            
+        if new_coordinates in self.entities:
+            return False
+            
+        entity = self.entities[old_coordinates]
+        del self.entities[old_coordinates]
+        self.entities[new_coordinates] = entity
+        entity.coordinates = new_coordinates
+        self._invalidate_cache()
+        return True
+        
+    def get_entities_in_range(self, coordinates: Coordinates, range_limit: int) -> List[Tuple[Entity, int]]:
+        """Получение списка сущностей в радиусе."""
+        return self.path_finder.get_entities_in_range(coordinates, range_limit)
+        
+    def find_path(self, start: Coordinates, end: Coordinates) -> Optional[List[Coordinates]]:
+        """Поиск пути между двумя точками."""
+        return self.path_finder.find_path(start, end)
+        
+    def get_entities_by_type(self, entity_type: Type[Entity]) -> List[Entity]:
+        """Получение всех сущностей определенного типа."""
+        if entity_type not in self._entity_cache:
+            self._entity_cache[entity_type] = [
+                entity for entity in self.entities.values()
+                if isinstance(entity, entity_type)
+            ]
+        return self._entity_cache[entity_type]
+
+    def _invalidate_cache(self) -> None:
+        """Инвалидация кэша сущностей."""
+        self._entity_cache.clear()
+        
+    def get_empty_cells(self) -> List[Coordinates]:
+        """Получение списка пустых клеток."""
+        empty_cells = []
+        for x in range(1, self.width + 1):
+            for y in range(1, self.height + 1):
+                coords = Coordinates(x, y)
+                if coords not in self.entities:
+                    empty_cells.append(coords)
+        return empty_cells
+
+    def is_position_vacant(self, coordinates: Coordinates) -> bool:
+        """Проверка, свободна ли позиция."""
+        return coordinates not in self.entities
+
+    def get_adjacent_positions(self, coordinates: Coordinates) -> List[Coordinates]:
+        """Получение списка соседних позиций."""
+        adjacent = []
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                    
+                new_coords = Coordinates(coordinates.x + dx, coordinates.y + dy)
+                if self.is_valid_coordinates(new_coords):
+                    adjacent.append(new_coords)
+                    
+        return adjacent
 
     def remove_entity(self, coordinates: Coordinates) -> None:
         """
@@ -74,69 +153,18 @@ class Board:
         """
         return self.entities.get(coordinates)
 
-    def is_position_vacant(self, coordinates: Coordinates) -> bool:
-        """Проверка, свободна ли позиция."""
-        return coordinates not in self.entities
-
-    def get_adjacent_positions(self, coordinates: Coordinates) -> List[Coordinates]:
-        """Получение списка соседних позиций."""
-        adjacent = []
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-                    
-                new_coords = Coordinates(coordinates.x + dx, coordinates.y + dy)
-                if self.is_valid_coordinates(new_coords):
-                    adjacent.append(new_coords)
-                    
-        return adjacent
-
-    def get_entities_by_type(self, entity_type: Type) -> List[Entity]:
+    def is_within_bounds(self, coordinates: Coordinates) -> bool:
         """
-        Получить список всех сущностей указанного типа.
+        Проверяет, находятся ли координаты в пределах доски.
         
         Args:
-            entity_type: Тип искомых сущностей
-        
+            coordinates: Проверяемые координаты
+            
         Returns:
-            List[Entity]: Список сущностей указанного типа
+            bool: True если координаты в пределах доски, False иначе
         """
-        return [
-            entity for entity in self.entities.values() 
-            if isinstance(entity, entity_type)
-        ]
-
-    def clear(self) -> None:
-        """Очистка доски."""
-        self.entities.clear()
-
-    def move_entity(self, entity: Entity, new_coordinates: Coordinates) -> None:
-        """
-        Перемещает сущность на новые координаты.
-        
-        Args:
-            entity: Перемещаемая сущность
-            new_coordinates: Новые координаты
-        
-        Raises:
-            ValueError: Если новые координаты заняты или находятся вне поля
-        """
-        if new_coordinates in self.entities:
-            raise ValueError(f"Клетка {new_coordinates} уже занята")
-        
-        if not (1 <= new_coordinates.x <= self.width and 
-                1 <= new_coordinates.y <= self.height):
-            raise ValueError(f"Координаты {new_coordinates} находятся вне поля")
-        
-        # Удаляем сущность со старых координат
-        old_coordinates = entity.coordinates
-        if old_coordinates in self.entities:
-            del self.entities[old_coordinates]
-        
-        # Размещаем на новых координатах
-        self.entities[new_coordinates] = entity
-        entity.coordinates = new_coordinates
+        return (1 <= coordinates.x <= self.width and 
+                1 <= coordinates.y <= self.height)
 
     def get_vacant_adjacent_positions(self, coordinates: Coordinates) -> List[Coordinates]:
         """Получение списка свободных соседних позиций."""
@@ -187,21 +215,6 @@ class Board:
             entity.entity_id,
             entity.get_state()
         )
-
-    def get_empty_cells(self) -> List[Coordinates]:
-        """
-        Получить список пустых клеток на доске.
-        
-        Returns:
-            List[Coordinates]: Список координат пустых клеток
-        """
-        empty_cells = []
-        for x in range(1, self.width + 1):
-            for y in range(1, self.height + 1):
-                coords = Coordinates(x, y)
-                if coords not in self.entities:
-                    empty_cells.append(coords)
-        return empty_cells
 
     def manhattan_distance(self, coords1: Coordinates, coords2: Coordinates) -> int:
         """
