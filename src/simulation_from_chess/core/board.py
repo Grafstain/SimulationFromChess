@@ -1,14 +1,12 @@
-import random
-from typing import Dict, List, Optional, Type, Tuple
+from typing import Dict, Optional, List, Type, Tuple, Set
 
-from ..core.coordinates import Coordinates
-from ..entities import *
-from src.simulation_from_chess.utils.logger import Logger
-from src.simulation_from_chess.core.game_state import GameState
-from src.simulation_from_chess.core.board_state import BoardState
-from src.simulation_from_chess.core.path_finder import PathFinder
+from .board_state import BoardState
+from .coordinates import Coordinates
+from .interfaces import IBoard
+from .path_finder import PathFinder
+from ..entities.entity import Entity  # Базовый класс вместо конкретных
+from ..utils.distance_calculator import DistanceCalculator
 
-#TODO: need rework
 class Board:
     def __init__(self, width: int, height: int):
         """
@@ -32,11 +30,19 @@ class Board:
         self._entity_cache: Dict[Type[Entity], List[Entity]] = {}
 
     def is_valid_coordinates(self, coordinates: Coordinates) -> bool:
-        """Проверка валидности координат."""
+        """
+        Проверка валидности координат.
+        
+        Args:
+            coordinates: Проверяемые координаты
+            
+        Returns:
+            bool: True если координаты валидны, False в противном случае
+        """
         return (1 <= coordinates.x <= self.width and 
                 1 <= coordinates.y <= self.height)
                 
-    def place_entity(self, coordinates: Coordinates, entity: Entity) -> bool:
+    def place_entity(self, coordinates: Coordinates, entity: Entity) -> None:
         """
         Размещение сущности на доске.
         
@@ -44,18 +50,20 @@ class Board:
             coordinates: Координаты для размещения
             entity: Размещаемая сущность
             
-        Returns:
-            bool: True если размещение успешно, False если позиция занята
+        Raises:
+            ValueError: Если координаты невалидны или позиция занята
         """
-        if not self.is_valid_coordinates(coordinates) or coordinates in self.entities:
-            return False
+        if not self.is_valid_coordinates(coordinates):
+            raise ValueError(f"Невалидные координаты: ({coordinates.x}, {coordinates.y})")
+            
+        if coordinates in self.entities:
+            raise ValueError(f"Позиция ({coordinates.x}, {coordinates.y}) уже занята")
             
         self.entities[coordinates] = entity
         entity.coordinates = coordinates
         self._invalidate_cache()
-        return True
-        
-    def move_entity(self, old_coordinates: Coordinates, new_coordinates: Coordinates) -> bool:
+
+    def move_entity(self, old_coordinates: Coordinates, new_coordinates: Coordinates) -> None:
         """
         Перемещение сущности с одних координат на другие.
         
@@ -63,24 +71,23 @@ class Board:
             old_coordinates: Текущие координаты сущности
             new_coordinates: Новые координаты для перемещения
             
-        Returns:
-            bool: True если перемещение успешно, False если нет
+        Raises:
+            ValueError: Если координаты невалидны или позиция занята
         """
         if not self.is_valid_coordinates(new_coordinates):
-            return False
+            raise ValueError(f"Невалидные координаты: ({new_coordinates.x}, {new_coordinates.y})")
             
         if old_coordinates not in self.entities:
-            return False
+            raise ValueError(f"На позиции ({old_coordinates.x}, {old_coordinates.y}) нет сущности")
             
         if new_coordinates in self.entities:
-            return False
+            raise ValueError(f"Позиция ({new_coordinates.x}, {new_coordinates.y}) уже занята")
             
         entity = self.entities[old_coordinates]
         del self.entities[old_coordinates]
         self.entities[new_coordinates] = entity
         entity.coordinates = new_coordinates
         self._invalidate_cache()
-        return True
         
     def get_entities_in_range(self, coordinates: Coordinates, range_limit: int) -> List[Tuple[Entity, int]]:
         """Получение списка сущностей в радиусе."""
@@ -90,14 +97,24 @@ class Board:
         """Поиск пути между двумя точками."""
         return self.path_finder.find_path(start, end)
         
-    def get_entities_by_type(self, entity_type: Type[Entity]) -> List[Entity]:
+    def get_entities_by_type(self, entity_type: Type) -> List[Entity]:
         """Получение всех сущностей определенного типа."""
-        if entity_type not in self._entity_cache:
-            self._entity_cache[entity_type] = [
-                entity for entity in self.entities.values()
-                if isinstance(entity, entity_type)
-            ]
-        return self._entity_cache[entity_type]
+        return [
+            entity for entity in self.entities.values()
+            if isinstance(entity, entity_type)
+        ]
+    
+    def get_entities_in_radius(self, center: Coordinates, radius: int) -> List[Entity]:
+        """Получение всех сущностей в заданном радиусе."""
+        return [
+            entity for entity in self.entities.values()
+            if DistanceCalculator.manhattan_distance(center, entity.coordinates) <= radius
+        ]
+    
+    def clear_caches(self) -> None:
+        """Очистка всех кэшей."""
+        self.path_finder._path_cache.clear()
+        self.path_finder._available_moves_cache.clear()
 
     def _invalidate_cache(self) -> None:
         """Инвалидация кэша сущностей."""
@@ -158,7 +175,7 @@ class Board:
         Проверяет, находятся ли координаты в пределах доски.
         
         Args:
-            coordinates: Проверяемые координаты
+            coordinates: Проверяемые коо��динаты
             
         Returns:
             bool: True если координаты в пределах доски, False иначе
@@ -228,3 +245,8 @@ class Board:
             int: Манхэттенское расстояние
         """
         return abs(coords1.x - coords2.x) + abs(coords1.y - coords2.y)
+
+    def clear(self) -> None:
+        """Очистка доски от всех сущностей."""
+        self.entities.clear()
+        self._invalidate_cache()
