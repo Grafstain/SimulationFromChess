@@ -4,6 +4,8 @@ from ..entities.grass import Grass
 from ..config import CREATURE_CONFIG
 from typing import Tuple, Optional
 
+from ..utils.distance_calculator import DistanceCalculator
+
 
 class Herbivore(Creature):
     def __init__(self, coordinates: Coordinates):
@@ -42,17 +44,26 @@ class Herbivore(Creature):
         return self.hp < self.max_hp
 
     def find_target(self, board):
-        """Поиск ближайшей травы."""
-        entities_in_range = board.get_entities_in_range(self.coordinates, self.speed * 2)
+        """
+        Поиск ближайшей травы.
         
-        # Фильтруем только траву
+        Args:
+            board: Игровая доска
+            
+        Returns:
+            Optional[Entity]: Найденная трава или None
+        """
+        # Получаем все сущности типа Grass на поле
         grass_targets = [
-            (entity, distance) for entity, distance in entities_in_range
-            if isinstance(entity, Grass)
+            (entity, DistanceCalculator.manhattan_distance(self.coordinates, entity.coordinates))
+            for entity in board.get_entities_by_type(Grass)
         ]
         
-        # Возвращаем ближайшую траву или None, если травы нет
-        return grass_targets[0][0] if grass_targets else None
+        # Сортируем по расстоянию и возвращаем ближайшую траву
+        if grass_targets:
+            grass_targets.sort(key=lambda x: x[1])
+            return grass_targets[0][0]
+        return None
 
     def _find_best_move(self, target_coords: Coordinates) -> Optional[Coordinates]:
         """Находит лучший ход в направлении цели."""

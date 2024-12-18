@@ -1,9 +1,10 @@
 import random
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Tuple, List
 from ..core.coordinates import Coordinates
 from .creature import Creature
 from .herbivore import Herbivore
 from ..config import CREATURE_CONFIG
+from ..utils.distance_calculator import DistanceCalculator
 
 if TYPE_CHECKING:
     from ..core.board import Board
@@ -51,7 +52,7 @@ class Predator(Creature):
             return result
         return random.random() <= self.hunt_success_chance
 
-    def interact_with_target(self, board: 'Board', target: Creature) -> Tuple[bool, str]:
+    def interact_with_target(self, board: 'Board', target: Creature) -> Tuple[bool, List[Tuple]]:
         """
         Взаимодействие хищника с целью (атака травоядного).
         
@@ -60,30 +61,64 @@ class Predator(Creature):
             target: Цель атаки
             
         Returns:
-            tuple[bool, str]: Успешность атаки и описание результата
+            Tuple[bool, List[Tuple]]: (успешность атаки, список действий для логирования)
         """
         if not isinstance(target, Herbivore):
-            return False, "Цель не является травоядным"
+            return False, [("Ошибка", "Цель не является травоядным")]
 
         if not self.try_attack_herbivore(target):
-            return False, "Травоядное успешно избежало атаки"
+            return False, [("Неудачная атака", "Травоядное успешно избежало атаки")]
 
         # Атака успешна, наносим урон
         target.take_damage(self.attack_damage)
+        actions = [("Атака", f"нанесено {self.attack_damage} урона")]
         
         # Если цель погибла, восстанавливаем здоровье хищнику
         if target.hp <= 0:
-            self.heal(CREATURE_CONFIG['predator']['food_value'])
-            # Возвращаем информацию о смерти в actions, чтобы MoveAction мог залогировать это
+            heal_amount = CREATURE_CONFIG['predator']['food_value']
+            self.heal(heal_amount)
             board.remove_entity(target.coordinates)
-            return True, [
-                ("Успешная охота", f"здоровье восстановлено на {CREATURE_CONFIG['predator']['food_value']}"),
-                ("Погиб", "", target, self)  # Добавляем информацию о цели и убийце
-            ]
-            
-        return True, f"Успешная атака, нанесено {self.attack_damage} урона"
+            actions.extend([
+                ("Успешная охота", f"здоровье восстановлено на {heal_amount}"),
+                ("Погиб", "", target, self)  # Информация о смерти цели
+            ])
+        
+        return True, actions
 
     def _get_planned_interaction(self, target) -> Tuple[str, str]:
         """Описание планируемой атаки хищника."""
         return ("Планирует атаковать", f"травоядное на ({target.coordinates.x}, {target.coordinates.y})")
+
+    def find_target(self, board):
+        """
+        Поиск ближайшей жертвы (травоядного).
+        
+        Args:
+            board: Игровая доска
+        
+        Returns:
+            Optional[Entity]: Найденное травоядное или None
+        """
+        # Получаем все сущности типа Herbivore на поле
+        herbivore_targets = [
+            (entity, DistanceCalculator.manhattan_distance(self.coordinates, entity.coordinates))
+            for entity in board.get_entities_by_type(Herbivore)
+            if entity.hp > 0  # Проверяем, что травоядное живо
+        ]
+        
+        # Сортируем по расстоянию и возвращаем ближайшее травоядное
+        if herbivore_targets:
+            herbivore_targets.sort(key=lambda x: x[1])
+            return herbivore_targets[0][0]
+        return None
+
+    def needs_food(self) -> bool:
+        """
+        Проверяет, нужно ли хищнику искать пищу.
+        
+        Returns:
+            bool: True если хищнику нужна пища, False в противном случае
+        """
+        # Хищник всегда ищет пищу, если его здоровье не максимальное
+        return self.hp < self.max_hp
 
