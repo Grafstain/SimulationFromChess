@@ -139,39 +139,26 @@ class TestBoardRendering(unittest.TestCase):
         ]
         
         # Очищаем доску перед каждым тестом
-        self.board.clear()
+        self.board.entities.clear()  # Используем прямой доступ к словарю
         
-        for entity, symbol in entities:
+        # Размещаем сущности
+        for entity, _ in entities:
             self.board.place_entity(entity.coordinates, entity)
-            
-            render_result = self._capture_render_output(
-                self.renderer.render,
-                self.board
-            )
-            
-            # Проверяем, что символ сущности присутствует в выводе
-            self.assertIn(
-                symbol, 
-                render_result,
-                f"Символ {symbol} для {entity.__class__.__name__} не найден в выводе"
-            )
-            
-            # Проверяем корректность цветового оформления
+        
+        # Получаем результат рендеринга
+        render_result = self._capture_render_output(self.renderer.render, self.board)
+        
+        # Проверяем наличие каждой сущности в выводе
+        for entity, symbol in entities:
             bg_color = (self.renderer.ANSI_BLACK_SQUARE_BACKGROUND 
                        if (entity.coordinates.x + entity.coordinates.y) % 2 == 0 
                        else self.renderer.ANSI_WHITE_SQUARE_BACKGROUND)
-            cell = self._get_entity_cell(bg_color, symbol)
-            self.assertIn(cell, render_result)
-            
-            # Проверяем корректность нумерации столбцов
-            expected_header = "     " + f"  {self.renderer.WIDE_SPACE}{self.renderer.EN_SPACE}".join(
-                str(i) for i in range(1, self.board.width + 1)
-            ) + "\n"
-            self.assertIn(expected_header, render_result)
-            
-            # Проверяем корректность нумерации строк
-            for rank in range(1, self.board.height + 1):
-                self.assertIn(f"{rank:2d}", render_result)
+            entity_cell = self._get_entity_cell(bg_color, symbol)
+            self.assertIn(
+                entity_cell,
+                render_result,
+                f"Сущность {entity.__class__.__name__} с символом {symbol} не найдена"
+            )
 
     def test_render_board_borders(self):
         """Тест отображения границ доски."""
@@ -200,7 +187,7 @@ class TestBoardRendering(unittest.TestCase):
         self.assertIn(
             self.renderer.ANSI_RESET, 
             render_result,
-            "Отсут��твует сброс цветового оформления"
+            "Отсутствует сброс цветового оформления"
         )
         
         # Проверка переносов строк

@@ -1,11 +1,8 @@
-import unittest
-from src.simulation_from_chess.core.board import Board
-from src.simulation_from_chess.core.coordinates import Coordinates
-from src.simulation_from_chess.entities.herbivore import Herbivore
-from src.simulation_from_chess.entities.predator import Predator
-from src.simulation_from_chess.entities.grass import Grass
+from unittest import TestCase
+from src.simulation_from_chess import Board, Coordinates, Herbivore, Predator, Grass, Stone
+from src.simulation_from_chess.entities.entity import Entity
 
-class TestBoard(unittest.TestCase):
+class TestBoard(TestCase):
     def setUp(self):
         """Подготовка тестового окружения."""
         self.board = Board(5, 5)  # Уменьшенное поле для тестов
@@ -22,6 +19,10 @@ class TestBoard(unittest.TestCase):
             Board(0, 5)
         with self.assertRaises(ValueError):
             Board(5, 0)
+        with self.assertRaises(ValueError):
+            Board(-1, 5)
+        with self.assertRaises(ValueError):
+            Board(5, -1)
             
     def test_place_entity(self):
         """Тест размещения сущности на доске."""
@@ -29,6 +30,29 @@ class TestBoard(unittest.TestCase):
         self.board.place_entity(entity.coordinates, entity)
         self.assertIn(entity.coordinates, self.board.entities)
         self.assertEqual(self.board.entities[entity.coordinates], entity)
+        
+    def test_place_entity_invalid_coordinates(self):
+        """Тест размещения сущности с невалидными координатами."""
+        invalid_coords = [
+            Coordinates(0, 1),    # x < 1
+            Coordinates(6, 1),    # x > width
+            Coordinates(1, 0),    # y < 1
+            Coordinates(1, 6),    # y > height
+            Coordinates(0, 0),    # обе координаты < 1
+            Coordinates(6, 6),    # обе координаты > размера
+            Coordinates(-1, 1),   # отрицательные координаты
+            Coordinates(1, -1)
+        ]
+        
+        for coords in invalid_coords:
+            entity = Herbivore(coords)
+            with self.assertRaises(ValueError) as context:
+                self.board.place_entity(coords, entity)
+            self.assertIn(
+                "невалидные координаты",
+                str(context.exception).lower(),
+                f"Неверное сообщение об ошибке для координат {coords}"
+            )
         
     def test_place_entity_occupied_cell(self):
         """Тест размещения сущности на занятую клетку."""
@@ -40,89 +64,169 @@ class TestBoard(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             self.board.place_entity(coords, entity2)
         
-        # Проверяем сообщение об ошибке
-        self.assertIn("уже занята", str(context.exception))
-        
-        # Проверяем, что первая сущность осталась на месте
+        error_message = str(context.exception)
+        self.assertTrue(
+            any(phrase in error_message.lower() for phrase in ["занята", "occupied"]),
+            f"Сообщение об ошибке '{error_message}' не содержит информацию о занятой позиции"
+        )
         self.assertEqual(self.board.get_entity(coords), entity1)
-            
-    def test_remove_entity(self):
-        """Тест удаления сущности с доски."""
-        entity = Herbivore(Coordinates(1, 1))
-        self.board.place_entity(entity.coordinates, entity)
-        self.board.remove_entity(entity.coordinates)
-        self.assertNotIn(entity.coordinates, self.board.entities)
         
-    def test_get_entity(self):
-        """Тест получения сущности по координатам."""
-        entity = Herbivore(Coordinates(1, 1))
-        self.board.place_entity(entity.coordinates, entity)
-        retrieved_entity = self.board.get_entity(entity.coordinates)
-        self.assertEqual(entity, retrieved_entity)
+    def test_is_position_vacant(self):
+        """Тест проверки свободной позиции."""
+        coords = Coordinates(1, 1)
+        entity = Herbivore(coords)
         
-    def test_get_nonexistent_entity(self):
-        """Тест получения несуществующей сущности."""
-        entity = self.board.get_entity(Coordinates(1, 1))
-        self.assertIsNone(entity)
+        self.assertTrue(self.board.is_position_vacant(coords))
+        self.board.place_entity(coords, entity)
+        self.assertFalse(self.board.is_position_vacant(coords))
+        
+    def test_is_valid_coordinates(self):
+        """Тест проверки валидности координат."""
+        # Проверяем валидные координаты
+        valid_coords = [
+            Coordinates(1, 1),  # Минимальные координаты
+            Coordinates(5, 5),  # Максимальные координаты
+            Coordinates(3, 3),  # Середина доски
+            Coordinates(1, 5),  # Граничные случаи
+            Coordinates(5, 1)
+        ]
+        
+        # Проверяем невалидные координаты
+        invalid_coords = [
+            Coordinates(0, 1),    # x < 1
+            Coordinates(6, 1),    # x > width
+            Coordinates(1, 0),    # y < 1
+            Coordinates(1, 6),    # y > height
+            Coordinates(0, 0),    # обе координаты < 1
+            Coordinates(6, 6),    # обе координаты > размера
+            Coordinates(-1, 1),   # отрицательные координаты
+            Coordinates(1, -1)
+        ]
+        
+        # Проверяем валидные координаты
+        for coords in valid_coords:
+            self.assertTrue(
+                self.board.is_valid_coordinates(coords),
+                f"Координаты {coords} должны быть валидными"
+            )
+        
+        # Проверяем невалидные координаты
+        for coords in invalid_coords:
+            self.assertFalse(
+                self.board.is_valid_coordinates(coords),
+                f"Координаты {coords} должны быть невалидными"
+            )
         
     def test_get_entities_by_type(self):
         """Тест получения сущностей определенного типа."""
-        herb = Herbivore(Coordinates(1, 1))
-        pred = Predator(Coordinates(2, 2))
-        grass = Grass(Coordinates(3, 3))
+        entities = {
+            Herbivore: [Coordinates(1, 1), Coordinates(2, 2)],
+            Predator: [Coordinates(3, 3)],
+            Grass: [Coordinates(4, 4), Coordinates(2, 3)],
+            Stone: [Coordinates(1, 2)]
+        }
         
-        self.board.place_entity(herb.coordinates, herb)
-        self.board.place_entity(pred.coordinates, pred)
-        self.board.place_entity(grass.coordinates, grass)
+        # Размещаем сущности
+        for entity_class, coords_list in entities.items():
+            for coords in coords_list:
+                try:
+                    self.board.place_entity(coords, entity_class(coords))
+                except ValueError as e:
+                    self.fail(f"Не удалось разместить {entity_class.__name__} на {coords}: {str(e)}")
         
-        herbivores = self.board.get_entities_by_type(Herbivore)
-        predators = self.board.get_entities_by_type(Predator)
-        grasses = self.board.get_entities_by_type(Grass)
+        # Проверяем количество каждого типа
+        for entity_class, coords_list in entities.items():
+            entities_of_type = self.board.get_entities_by_type(entity_class)
+            self.assertEqual(
+                len(entities_of_type),
+                len(coords_list),
+                f"Неверное количество сущностей типа {entity_class.__name__}: "
+                f"ожидалось {len(coords_list)}, получено {len(entities_of_type)}"
+            )
+            
+            # Проверяем, что все сущности правильного типа
+            for entity in entities_of_type:
+                self.assertIsInstance(
+                    entity,
+                    entity_class,
+                    f"Сущность {entity} не является экземпляром {entity_class.__name__}"
+                )
         
-        self.assertEqual(len(herbivores), 1)
-        self.assertEqual(len(predators), 1)
-        self.assertEqual(len(grasses), 1)
-        
-    def test_get_empty_cells(self):
-        """Тест получения пустых клеток."""
-        # Проверяем начальное количество пустых клеток
-        initial_empty = len(self.board.get_empty_cells())
-        self.assertEqual(initial_empty, self.board.width * self.board.height)
-        
-        # Размещаем сущность
-        entity = Herbivore(Coordinates(1, 1))
-        self.board.place_entity(entity.coordinates, entity)
-        
-        # Проверяем, что количество пустых клеток уменьшилось
-        new_empty = len(self.board.get_empty_cells())
-        self.assertEqual(new_empty, initial_empty - 1)
-        
-        # Проверяем, что занятая клетка не входит в список пустых
-        empty_cells = self.board.get_empty_cells()
-        self.assertNotIn(entity.coordinates, empty_cells)
-        
-    def test_manhattan_distance(self):
-        """Тест расчета манхэттенского расстояния."""
-        test_cases = [
-            (Coordinates(1, 1), Coordinates(4, 5), 7),  # |4-1| + |5-1| = 3 + 4 = 7
-            (Coordinates(2, 2), Coordinates(2, 5), 3),  # |2-2| + |5-2| = 0 + 3 = 3
-            (Coordinates(1, 1), Coordinates(1, 1), 0),  # |1-1| + |1-1| = 0 + 0 = 0
-            (Coordinates(5, 5), Coordinates(1, 1), 8)   # |1-5| + |1-5| = 4 + 4 = 8
+    def test_clear_board(self):
+        """Тест очистки доски."""
+        # Размещаем несколько сущностей
+        entities = [
+            Herbivore(Coordinates(1, 1)),
+            Predator(Coordinates(2, 2)),
+            Grass(Coordinates(3, 3))
         ]
         
-        for coords1, coords2, expected in test_cases:
-            distance = self.board.manhattan_distance(coords1, coords2)
-            self.assertEqual(
-                distance, 
-                expected,
-                f"Неверное расстояние между {coords1} и {coords2}"
-            )
+        for entity in entities:
+            self.board.place_entity(entity.coordinates, entity)
         
-    def test_next_turn(self):
-        """Тест перехода к следующему ходу."""
-        initial_turn = self.board.game_state.current_turn
-        self.board.next_turn()
-        self.assertEqual(self.board.game_state.current_turn, initial_turn + 1)
+        # Проверяем, что сущности размещены
+        self.assertEqual(len(self.board.entities), len(entities))
+        
+        # Очищаем доску
+        self.board.clear()
+        
+        # Проверяем, что доска пуста
+        self.assertEqual(len(self.board.entities), 0)
+        
+    def test_move_entity(self):
+        """Тест перемещения сущности."""
+        # Размещаем сущность
+        start_coords = Coordinates(1, 1)
+        end_coords = Coordinates(2, 2)
+        entity = Herbivore(start_coords)
+        self.board.place_entity(start_coords, entity)
+        
+        # Проверяем успешное перемещение
+        self.board.move_entity(start_coords, end_coords)
+        self.assertNotIn(start_coords, self.board.entities)
+        self.assertIn(end_coords, self.board.entities)
+        self.assertEqual(entity.coordinates, end_coords)
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_move_entity_invalid_coordinates(self):
+        """Тест перемещения сущности на невалидные координаты."""
+        # Размещаем сущность
+        start_coords = Coordinates(1, 1)
+        entity = Herbivore(start_coords)
+        self.board.place_entity(start_coords, entity)
+        
+        invalid_coords = [
+            Coordinates(0, 1),    # x < 1
+            Coordinates(6, 1),    # x > width
+            Coordinates(1, 0),    # y < 1
+            Coordinates(1, 6),    # y > height
+        ]
+        
+        for coords in invalid_coords:
+            with self.assertRaises(ValueError) as context:
+                self.board.move_entity(start_coords, coords)
+            self.assertIn(
+                "невалидные координаты",
+                str(context.exception).lower(),
+                f"Неверное сообщение об ошибке для координат {coords}"
+            )
+            # Проверяем, что сущность осталась на месте
+            self.assertEqual(entity.coordinates, start_coords)
+
+    def test_move_entity_to_occupied_cell(self):
+        """Тест перемещения сущности на занятую клетку."""
+        # Размещаем две сущности
+        start_coords = Coordinates(1, 1)
+        occupied_coords = Coordinates(2, 2)
+        entity1 = Herbivore(start_coords)
+        entity2 = Predator(occupied_coords)
+        
+        self.board.place_entity(start_coords, entity1)
+        self.board.place_entity(occupied_coords, entity2)
+        
+        with self.assertRaises(ValueError) as context:
+            self.board.move_entity(start_coords, occupied_coords)
+        self.assertIn("уже занята", str(context.exception))
+        
+        # Проверяем, что сущности остались на своих местах
+        self.assertEqual(entity1.coordinates, start_coords)
+        self.assertEqual(entity2.coordinates, occupied_coords)

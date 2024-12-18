@@ -1,90 +1,123 @@
-import unittest
+from unittest import TestCase
 from src.simulation_from_chess.utils.logger import Logger
 from src.simulation_from_chess.entities.herbivore import Herbivore
 from src.simulation_from_chess.entities.predator import Predator
 from src.simulation_from_chess.core.coordinates import Coordinates
+from src.simulation_from_chess.entities.grass import Grass
 
-class TestLogger(unittest.TestCase):
+class TestLogger(TestCase):
     def setUp(self):
         self.logger = Logger()
         self.herbivore = Herbivore(Coordinates(1, 1))
         self.predator = Predator(Coordinates(2, 2))
 
-    def test_basic_action_logging(self):
-        """Тест базового логирования действий."""
-        self.logger.log_action(self.herbivore, "Переместился", "на координаты (2, 2)")
+    def test_log_action_for_creature(self):
+        """Тест логирования действий существа."""
+        self.logger.log_action(self.herbivore, "Планирует движение", "к Grass на (2, 2)")
         
-        self.assertIn(self.herbivore, self.logger.actions_log)
+        # Проверяем, что действие сохранено в состоянии существа
+        entity_key = str(self.herbivore)
+        self.assertIn(entity_key, self.logger.creatures_state)
         self.assertEqual(
-            self.logger.actions_log[self.herbivore],
-            "Переместился на координаты (2, 2)"
+            self.logger.creatures_state[entity_key]['action'],
+            "Планирует движение к Grass на (2, 2)"
         )
 
-    def test_death_logging_by_predator(self):
-        """Тест логирования смерти от хищника."""
-        self.logger.log_action(self.herbivore, "Погиб", killer=self.predator)
-        
-        self.assertIn(self.herbivore, self.logger.dead_entities)
-        coords, death_text = self.logger.dead_entities[self.herbivore]
-        self.assertEqual(death_text, f"Был съеден существом {self.predator}")
-
-    def test_death_logging_by_hunger(self):
-        """Тест логирования смерти от голода."""
-        death_details = "от голода на координатах (1, 1)"
-        self.logger.log_action(self.herbivore, "Погиб", death_details)
-        
-        self.assertIn(self.herbivore, self.logger.dead_entities)
-        coords, death_text = self.logger.dead_entities[self.herbivore]
-        self.assertEqual(death_text, f"Погиб {death_details}")
-
-    def test_dead_entities_clearing(self):
-        """Тест очистки списка мертвых существ после вывода."""
-        self.logger.log_action(self.herbivore, "Погиб", killer=self.predator)
-        self.assertIn(self.herbivore, self.logger.dead_entities)
-        
-        # Вызываем вывод состояния
-        self.logger.log_creatures_state({})
-        
-        # Проверяем, что список мертвых существ очищен
-        self.assertEqual(len(self.logger.dead_entities), 0)
-
-    def test_multiple_actions_same_creature(self):
-        """Тест обновления действий для одного существа."""
-        self.logger.log_action(self.herbivore, "Действие1", "детали1")
-        self.logger.log_action(self.herbivore, "Действие2", "детали2")
-        
-        # Должно сохраниться только последнее действие
+    def test_log_system_message(self):
+        """Тест логирования системного сообщения."""
+        self.logger.log_action(None, "Система", "тестовое сообщение")
+        self.assertEqual(len(self.logger.system_logs), 1)
         self.assertEqual(
-            self.logger.actions_log[self.herbivore],
-            "Действие2 детали2"
+            self.logger.system_logs[0],
+            "Система: тестовое сообщение"
         )
 
-    def test_complex_move_result_logging(self):
-        """Тест логирования сложного результата перемещения."""
-        # Симулируем результат успешной охоты
-        move_result = [
-            ("Успешная охота", "здоровье восстановлено на 30"),
-            ("Погиб", "", self.herbivore, self.predator)
-        ]
+    def test_clear_logs(self):
+        """Тест очистки логов."""
+        # Добавляем действие и системное сообщение
+        self.logger.log_action(self.herbivore, "Действие", "детали")
+        self.logger.log_action(None, "Система", "сообщение")
         
-        # Логируем каждое действие из результата
-        for action in move_result:
-            if len(action) == 4:  # Действие с информацией о смерти
-                action_type, details, target, killer = action
-                self.logger.log_action(target, action_type, details, killer=killer)
-            else:  # Обычное действие
-                self.logger.log_action(self.predator, action[0], action[1])
+        # Очищаем логи
+        self.logger.clear_logs()
         
-        # Проверяем логирование действия хищника
-        self.assertIn(self.predator, self.logger.actions_log)
-        self.assertTrue(
-            self.logger.actions_log[self.predator].startswith("Успешная охота")
-        )
+        # Проверяем, что системные сообщения очищены
+        self.assertEqual(len(self.logger.system_logs), 0)
         
-        # Проверяем логирование смерти травоядного
-        self.assertIn(self.herbivore, self.logger.dead_entities)
-        _, death_text = self.logger.dead_entities[self.herbivore]
-        self.assertTrue(death_text.startswith("Был съеден существом"))
+        # Проверяем, что действия существ очищены, но информация о существах сохранена
+        entity_key = str(self.herbivore)
+        self.assertIn(entity_key, self.logger.creatures_state)
+        self.assertEqual(self.logger.creatures_state[entity_key]['action'], '')
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_log_creatures_state(self):
+        """Тест обновления состояния существ."""
+        entities = {
+            self.herbivore.coordinates: self.herbivore,
+            self.predator.coordinates: self.predator
+        }
+        
+        self.logger.log_creatures_state(entities)
+        
+        # Проверяем, что состояния обоих существ сохранены
+        self.assertEqual(len(self.logger.creatures_state), 2)
+        self.assertIn(str(self.herbivore), self.logger.creatures_state)
+        self.assertIn(str(self.predator), self.logger.creatures_state)
+
+    def test_log_initial_creatures_state(self):
+        """Тест логирования начального состояния размещенных существ."""
+        # Создаем несколько существ с разными координатами
+        herbivore1 = Herbivore(Coordinates(1, 1))
+        herbivore2 = Herbivore(Coordinates(2, 2))
+        predator1 = Predator(Coordinates(3, 3))
+        grass = Grass(Coordinates(4, 4))  # Трава не должна попасть в лог существ
+        
+        # Создаем словарь сущностей, имитируя доску
+        entities = {
+            herbivore1.coordinates: herbivore1,
+            herbivore2.coordinates: herbivore2,
+            predator1.coordinates: predator1,
+            grass.coordinates: grass
+        }
+        
+        # Логируем состояние
+        self.logger.log_creatures_state(entities)
+        
+        # Проверяем количество существ в логе (должно быть 3, без травы)
+        self.assertEqual(len(self.logger.creatures_state), 3)
+        
+        # Проверяем наличие всех существ в логе
+        self.assertIn(str(herbivore1), self.logger.creatures_state)
+        self.assertIn(str(herbivore2), self.logger.creatures_state)
+        self.assertIn(str(predator1), self.logger.creatures_state)
+        
+        # Проверяем корректность сохраненной информации для каждого существа
+        for entity in [herbivore1, herbivore2, predator1]:
+            state = self.logger.creatures_state[str(entity)]
+            self.assertEqual(state['type'], entity.__class__.__name__)
+            self.assertEqual(state['hp'], entity.hp)
+            self.assertEqual(state['coordinates'], entity.coordinates)
+            self.assertEqual(state['action'], '')  # Начальное действие должно быть пустым
+
+        # Проверяем, что трава не попала в лог существ
+        self.assertNotIn(str(grass), self.logger.creatures_state)
+
+    def test_log_creatures_state_updates(self):
+        """Тест обновления состояния существ при изменении их параметров."""
+        # Создаем существо и добавляем его в начальное состояние
+        herbivore = Herbivore(Coordinates(1, 1))
+        entities = {herbivore.coordinates: herbivore}
+        self.logger.log_creatures_state(entities)
+        
+        # Проверяем начальное состояние
+        initial_state = self.logger.creatures_state[str(herbivore)]
+        self.assertEqual(initial_state['coordinates'], Coordinates(1, 1))
+        self.assertEqual(initial_state['hp'], herbivore.hp)
+        self.assertEqual(initial_state['action'], '')
+        
+        # Добавляем действие и проверяем его сохранение
+        self.logger.log_action(herbivore, "Планирует движение", "к Grass на (2, 2)")
+        self.logger.log_creatures_state(entities)
+        self.assertEqual(
+            self.logger.creatures_state[str(herbivore)]['action'],
+            "Планирует движение к Grass на (2, 2)"
+        )
