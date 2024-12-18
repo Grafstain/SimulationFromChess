@@ -21,13 +21,14 @@ CREATURE_CONFIG = {
 
 # Параметры симуляции
 SIMULATION_CONFIG = {
-    'hunger_damage': 5,       # Урон от голода за ход
-    'min_grass': 4,          # Минимальное количество травы на поле
-    'grass_spawn_chance': 0.3,  # Шанс появления новой травы (0.0 - 1.0)
-    'initial_herbivores': 3,    # Начальное количество травоядных
-    'initial_predators': 2,     # Начальное количество хищников
-    'initial_grass': 6,         # Начальное количество травы
-    'initial_stones': 3,        # Добавляем начальное количество камней
-    'board_size': 8,           # Размер поля (8x8)
-    'turn_delay': 1.0,         # Задержка между ходами в секундах
-} 
+    'board_size': 10,
+    'initial_herbivores': 3,
+    'initial_predators': 2,
+    'initial_grass': 4,
+    'initial_stones': 3,
+    'min_grass': 4,
+    'grass_spawn_chance': 0.3,
+    'hunger_damage': 5,
+    'max_turns': 100,
+    'turn_delay': 1.0
+}
