@@ -1,68 +1,119 @@
-from typing import Dict
-from ..entities.creature import Creature
+from typing import Dict, Any, Optional
 from tabulate import tabulate
+from ..entities.creature import Creature
 
 class Logger:
     def __init__(self):
-        self.actions_log = {}  # Словарь для хранения действий существ
-        self.dead_entities = {}  # Словарь для хранения мертвых существ
+        """Инициализация логгера."""
+        self.creatures_state = {}  # Словарь для хранения состояния и действий существ
+        self.system_logs = []      # Список для системных сообщений
 
-    def log_action(self, creature, action_type, details="", killer=None):
+    def clear_logs(self) -> None:
+        """Очистка логов текущего хода."""
+        self.system_logs.clear()
+        # Очищаем только действия, сохраняя базовую информацию о существах
+        for state in self.creatures_state.values():
+            state['action'] = ''
+
+    def log_action(self, entity, action_type: str, details: str, killer=None) -> None:
         """
-        Сохранение действия существа.
+        Логирование действия.
         
         Args:
-            creature: Существо, совершившее действие
+            entity: Сущность, выполнившая действие
             action_type: Тип действия
             details: Детали действия
-            killer: Существо, убившее данное существо (если применимо)
+            killer: Сущность, вызвавшая смерть (опционально)
         """
-        action_text = action_type
-        if details:  # Добавляем детали только если они не пустые
-            action_text += f" {details}"
-        
-        # Записываем только одно действие для существа за ход
-        self.actions_log[creature] = action_text
-        
-        # Если существо погибло, добавляем его в список мертвых
-        if action_type == "Погиб":
-            if killer:
-                death_text = f"Был съеден существом {killer}"
-            else:
-                death_text = action_text
-            self.dead_entities[creature] = (creature.coordinates, death_text)
+        if entity is None:  # Системное сообщение
+            if isinstance(details, str) and "Размещен" in details and "creature" not in details.lower():
+                return  # Пропускаем логирование размещения не-существ
+            self.system_logs.append(f"{action_type}: {details}")
+            return
 
-    def log_creatures_state(self, entities: Dict):
-        """Вывод состояния существ в табличном формате."""
-        creatures_data = []
+        entity_key = str(entity)
+        if entity_key not in self.creatures_state:
+            self.creatures_state[entity_key] = {
+                'type': entity.__class__.__name__,
+                'hp': getattr(entity, 'hp', 'N/A'),
+                'coordinates': getattr(entity, 'coordinates', None),
+                'action': ''
+            }
+
+        # Обновляем текущее состояние существа
+        self.creatures_state[entity_key].update({
+            'hp': getattr(entity, 'hp', 'N/A'),
+            'coordinates': getattr(entity, 'coordinates', None)
+        })
+
+        if killer:
+            action_text = f"{action_type} {details} (убит существом {killer})"
+        else:
+            if action_type == "Планирует":
+                if "Планирует движение" in details:
+                    action_text = details
+                elif "Не может двигаться" in details:
+                    action_text = "Не может двигаться: путь заблокирован"
+                elif "Отдыхает" in details:
+                    action_text = "Отдыхает"
+                elif "Цель не найдена" in details:
+                    action_text = "Цель не найдена"
+                else:
+                    action_text = f"{action_type}: {details}"
+            else:
+                action_text = f"{action_type} {details}"
         
-        # Добавляем живых существ
+        self.creatures_state[entity_key]['action'] = action_text
+
+    def log_creatures_state(self, entities: dict) -> None:
+        """
+        Обновление состояния существ.
+        
+        Args:
+            entities: Словарь сущностей на доске
+        """
+        # Создаем новый словарь состояний для всех существ на доске
+        new_creatures_state = {}
+        
+        # Обновляем или добавляем новые состояния только для существ (Creature)
         for entity in entities.values():
             if isinstance(entity, Creature):
-                action = self.actions_log.get(entity, "")
-                creatures_data.append([
-                    str(entity),
-                    f"({entity.coordinates.x}, {entity.coordinates.y})",
-                    entity.hp,
-                    action
-                ])
+                entity_key = str(entity)
+                # Сохраняем предыдущее действие, если оно было
+                previous_action = self.creatures_state.get(entity_key, {}).get('action', '')
+                
+                new_creatures_state[entity_key] = {
+                    'type': entity.__class__.__name__,
+                    'hp': entity.hp,
+                    'coordinates': entity.coordinates,
+                    'action': previous_action
+                }
         
-        # Добавляем мертвых существ
-        for creature, (coords, action) in self.dead_entities.items():
-            creatures_data.append([
-                str(creature),
-                f"({coords.x}, {coords.y})",
-                0,
-                action
-            ])
-        
-        if creatures_data:
+        # Заменяем старый словарь состояний новым
+        self.creatures_state = new_creatures_state
+
+    def print_logs(self) -> None:
+        """Вывод всех логов в табличном формате."""
+        if self.system_logs:
+            print("\nСистемные сообщения:")
+            for log in self.system_logs:
+                print(f"  {log}")
+            self.system_logs.clear()
+
+        if self.creatures_state:
             print("\nСостояние существ:")
+            creatures_table = [
+                [
+                    name,
+                    state['type'],
+                    f"{state['hp']} HP",
+                    f"({state['coordinates'].x}, {state['coordinates'].y})",
+                    state['action']
+                ]
+                for name, state in self.creatures_state.items()
+            ]
             print(tabulate(
-                creatures_data,
-                headers=['Существо', 'Координаты', 'HP', 'Действие'],
-                tablefmt='simple'
+                creatures_table,
+                headers=['Существо', 'Тип', 'Здоровье', 'Координаты', 'Действие'],
+                tablefmt='grid'
             ))
-        
-        # Очищаем список мертвых существ после вывода
-        self.dead_entities.clear()
