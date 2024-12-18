@@ -72,11 +72,29 @@ class TestHunger(unittest.TestCase):
         # Применяем урон от голода
         self.hunger_action.execute(self.board, self.logger)
         
-        # Проверяем, что существо умерло и удалено с доски
+        # Проверяем, что существо умерло
         self.assertLessEqual(herbivore.hp, 0, "Существо должно умереть от голода")
+        
+        # Проверяем, что существо все еще на доске для логирования
+        self.assertIsNotNone(
+            self.board.get_entity(herbivore.coordinates),
+            "Мертвое существо должно оставаться на доске один ход для логирования"
+        )
+        
+        # Проверяем, что существо добавлено в список мертвых
+        self.assertIn(
+            herbivore.coordinates,
+            self.hunger_action.dead_entities,
+            "Мертвое существо должно быть добавлено в список для удаления"
+        )
+        
+        # Выполняем следующий ход
+        self.hunger_action.execute(self.board, self.logger)
+        
+        # Теперь проверяем, что существо удалено с доски
         self.assertIsNone(
             self.board.get_entity(herbivore.coordinates),
-            "Мертвое существо должно быть удалено с доски"
+            "Мертвое существо должно быть удалено с доски на следующий ход"
         )
 
     def test_hunger_recovery(self) -> None:
@@ -112,20 +130,16 @@ class TestHunger(unittest.TestCase):
     def test_hunger_logging(self) -> None:
         """Тест логирования урона от голода."""
         herbivore = Herbivore(Coordinates(1, 1))
+        # Устанавливаем HP так, чтобы существо умерло от голода
+        herbivore.hp = self.hunger_action.hunger_damage - 1
         self._setup_entities([(herbivore, herbivore.coordinates)])
         
         # Применяем урон от голода
         self.hunger_action.execute(self.board, self.logger)
         
-        # Проверяем, что урон был залогирован
-        self.logger.log_action.assert_called()
-        
-        # Проверяем содержимое лога
-        log_calls = self.logger.log_action.call_args_list
-        hunger_logged = any(
-            "голод" in str(call).lower() for call in log_calls
-        )
-        self.assertTrue(
-            hunger_logged,
-            "Урон от голода должен быть отражен в логах"
+        # Проверяем логирование смерти
+        self.logger.log_action.assert_called_with(
+            herbivore,
+            "Погиб",
+            f"от голода на координатах ({herbivore.coordinates.x}, {herbivore.coordinates.y})"
         )
